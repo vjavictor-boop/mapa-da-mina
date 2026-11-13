@@ -147,10 +147,17 @@ window.dash = (() => {
 
 <div class="mm">
   <header class="mm-head" id="topo">
-    <div class="mm-brand"><span class="mm-logo"><img src="logo.png" alt="CVC Master Franquia DF &amp; MG" width="300" height="100"></span></div>
-    <p class="mm-kicker">Disponibilidade Fretamento · lugares por rota</p>
-    <h1 class="mm-title">Mapa da Mina</h1>
-    <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
+    <div class="mm-topbar">
+      <span class="mm-logo"><img src="logo.png" alt="CVC Master Franquia DF &amp; MG" width="300" height="100"></span>
+      <div class="mm-meta">
+        <span class="mm-meta-l">Disponibilidade Fretamento</span>
+        <span class="mm-meta-d">Dados até 13/11/2026</span>
+      </div>
+    </div>
+    <div class="mm-hero">
+      <p class="mm-kicker" id="mm-kicker">Mapa da Mina</p>
+      <h1 class="mm-title" id="mm-h1">Mapa da Mina</h1>
+    </div>
     <nav class="mm-tabs" aria-label="Seções">
       <a class="mm-cta" href="#divulgacao" data-tab="divulgacao">
         <span class="mm-cta-k">Para o marketing</span>
@@ -183,9 +190,6 @@ window.dash = (() => {
     </label>
     <p class="mm-div-hoje" data-draw="d-hoje"></p>
   </section>
-
-  <p class="mm-div-resumo" data-draw="d-resumo">—</p>
-
   <section class="mm-sec" id="recomendacoes">
     <h2>O que divulgar primeiro</h2>
     <p>Os 6 destinos com mais lugares livres perto do embarque, já com texto sugerido para as peças. A ordem considera a quantidade de lugares e quanto falta para o voo sair.</p>
@@ -305,9 +309,6 @@ window.dash = (() => {
     <label for="p-col">Coleta<select id="p-col" class="dash-select" data-draw="p-col"></select></label>
     <p class="mm-div-hoje">Saída de Brasília (DF) · pacote exclusivo · preço por pessoa com taxas, 2 adultos</p>
   </section>
-
-  <p class="mm-div-resumo" data-draw="p-resumo">Carregando preços…</p>
-
   <section class="mm-sec" id="preco-medio">
     <h2>Preço médio por destino</h2>
     <p>Média do menor preço de cada semana com saída. Clique em um destino para ver o gráfico semanal e o orçamento de amostra.</p>
@@ -1076,7 +1077,16 @@ dash.draw('d-tabela', (tb) => {
   const show = (id) => {
     if (!id || !document.getElementById(id) || !document.getElementById(id).classList.contains('mm-tab')) id = 'mapa-geral';
     document.querySelectorAll('.mm-tab').forEach((p) => { p.hidden = p.id !== id; });
-    document.querySelectorAll('.mm-cta[data-tab]').forEach((a) => { const on = a.dataset.tab === id; a.classList.toggle('is-on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    document.querySelectorAll('.mm-cta[data-tab]').forEach((a) => {
+      const on = a.dataset.tab === id; a.classList.toggle('is-on', on);
+      if (on) {
+        a.setAttribute('aria-current', 'page');
+        const t = a.querySelector('.mm-cta-t').textContent.trim(), k = a.querySelector('.mm-cta-k').textContent.trim();
+        document.getElementById('mm-h1').textContent = t;
+        document.getElementById('mm-kicker').textContent = id === 'mapa-geral' ? 'CVC Master Franquia DF & MG · ' + k : 'Mapa da Mina · ' + k;
+        document.title = id === 'mapa-geral' ? 'Mapa da Mina' : t + ' · Mapa da Mina';
+      } else a.removeAttribute('aria-current');
+    });
     dash._render();
   };
   document.querySelectorAll('.mm-cta').forEach((a) => a.addEventListener('click', () => setTimeout(() => window.scrollTo({ top: 0 }), 0)));
@@ -1288,6 +1298,69 @@ dash.draw('p-cards', (el) => {
   });
 });
 </script>
+<style>
+/* Topo: cabeçalho com profundidade e botões em relevo */
+.mm-head { padding-block: 20px 76px; background:
+  radial-gradient(900px 420px at 88% -20%, color-mix(in oklab, #5b7cff 70%, transparent) 0%, transparent 62%),
+  radial-gradient(700px 380px at -5% 115%, color-mix(in oklab, #0b1f7a 80%, transparent) 0%, transparent 60%),
+  linear-gradient(160deg, #2449dc 0%, #1b39b8 52%, #12288a 100%); }
+.mm-head::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, .16) 1px, transparent 1.6px); background-size: 22px 22px;
+  -webkit-mask-image: linear-gradient(115deg, transparent 35%, #000 100%); mask-image: linear-gradient(115deg, transparent 35%, #000 100%); }
+.mm-head::after { right: 7%; top: -90px; width: 64px; height: 230px; clip-path: none; transform: rotate(28deg); border-radius: 6px; opacity: 1;
+  background: linear-gradient(180deg, #ffe14d, var(--yellow)); box-shadow: 54px 30px 0 -26px color-mix(in oklab, var(--yellow) 55%, transparent), 0 20px 40px rgba(5, 15, 70, .35); }
+.mm-topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid rgba(255, 255, 255, .14); }
+.mm-logo { display: block; background: #ffffff; border-radius: 14px; padding: 8px 14px; border: 1px solid rgba(255, 255, 255, .8);
+  box-shadow: inset 0 -2px 0 rgba(20, 40, 120, .08), 0 2px 4px rgba(5, 15, 70, .25), 0 14px 32px -8px rgba(5, 15, 70, .55); }
+.mm-logo img { width: 150px; }
+.mm-meta { display: grid; justify-items: end; gap: 6px; margin-right: 120px; }
+.mm-meta-l { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--hero-muted); }
+.mm-meta-d { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #ffffff; padding: 5px 12px; border-radius: 999px;
+  background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .22); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2); }
+.mm-meta-d::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); box-shadow: 0 0 0 3px color-mix(in oklab, var(--yellow) 30%, transparent); }
+.mm-hero { display: grid; gap: 10px; margin-top: 30px; }
+.mm-kicker { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--yellow); }
+.mm-kicker::before { content: ""; width: 32px; height: 3px; border-radius: 2px; background: var(--yellow); flex: none; }
+.mm-title { font-size: clamp(40px, 6.4vw, 72px); text-transform: none; letter-spacing: -.035em; line-height: .98; color: #ffffff;
+  text-shadow: 0 1px 0 rgba(5, 15, 70, .25), 0 14px 34px rgba(5, 15, 70, .45); }
+.mm-tabs { margin-top: 32px; gap: 18px; }
+.mm-cta { position: relative; overflow: hidden; border-radius: 18px; padding: 20px 22px 20px 24px; border: 1px solid rgba(255, 255, 255, .28);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .17) 0%, rgba(255, 255, 255, .06) 100%);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), inset 0 -1px 0 rgba(5, 15, 70, .25), 0 4px 10px -4px rgba(5, 15, 70, .5), 0 18px 34px -12px rgba(5, 15, 70, .6); }
+.mm-cta::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(120% 80% at 0% 0%, rgba(255, 255, 255, .22), transparent 55%); opacity: .7; }
+.mm-cta > * { position: relative; }
+.mm-cta:hover { background: linear-gradient(180deg, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, .1) 100%); }
+.mm-cta-a { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
+  background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .32); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 4px 10px rgba(5, 15, 70, .3); }
+.mm-cta-k { opacity: .8; }
+.mm-cta.is-on { color: var(--ink); border-color: #ffe680;
+  background: linear-gradient(180deg, #ffe45c 0%, #ffd200 55%, #f3c400 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -3px 0 rgba(150, 100, 0, .22), 0 6px 0 #c79800, 0 10px 14px -4px rgba(5, 15, 70, .45), 0 24px 40px -10px rgba(5, 15, 70, .6); }
+.mm-cta.is-on::before { background: radial-gradient(120% 90% at 0% 0%, rgba(255, 255, 255, .55), transparent 55%); }
+.mm-cta.is-on:hover { background: linear-gradient(180deg, #ffe873 0%, #ffd71a 55%, #f5c80a 100%); }
+.mm-cta.is-on .mm-cta-a { transform: none; background: var(--ink); color: var(--yellow); border-color: var(--ink); box-shadow: 0 4px 10px rgba(5, 15, 70, .35); }
+.mm-cta.is-on .mm-cta-a span, .mm-cta.is-on .mm-cta-a { rotate: 90deg; }
+@media (prefers-reduced-motion: no-preference) {
+  .mm-cta { transition: transform .18s ease, box-shadow .18s ease, background .18s ease; }
+  .mm-cta-a { transition: transform .18s ease, rotate .2s ease; }
+  .mm-cta:hover { transform: translateY(-3px); }
+  .mm-cta:hover .mm-cta-a { transform: translateX(3px); }
+  .mm-cta:active { transform: translateY(2px); }
+  .mm-cta.is-on:active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), 0 2px 0 #c79800, 0 6px 12px -4px rgba(5, 15, 70, .45); }
+}
+@media (max-width: 860px) { .mm-tabs { gap: 12px; } .mm-cta-a { width: 40px; height: 40px; font-size: 19px; } }
+@media (max-width: 600px) {
+  .mm-head { padding-block: 16px 64px; }
+  .mm-head::after { right: -6px; top: -110px; width: 44px; height: 200px; }
+  .mm-meta { margin-right: 0; justify-items: start; }
+  .mm-logo img { width: 130px; }
+  .mm-hero { margin-top: 22px; }
+}
+@media (prefers-color-scheme: dark) { .mm-head { background: radial-gradient(900px 420px at 88% -20%, rgba(91, 124, 255, .45) 0%, transparent 62%), linear-gradient(160deg, #1a35a8 0%, #12257a 55%, #0b1850 100%); } }
+</style>
+
 <script>
 if (window.mmShowInitial) mmShowInitial(); else dash._render();
 d3.csv('voos.csv').then((rows) => dash._load(rows)).catch((e) => { console.error(e); dash._load([], 'error'); });
