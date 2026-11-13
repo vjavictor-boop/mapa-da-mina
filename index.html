@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mapa da Mina</title>
 <meta name="description" content="Lugares disponíveis em fretamentos e bloqueios aéreos por rota e mês.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="logo.png"><link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter:wght@400;500;600&display=swap">
 <style>
@@ -147,15 +147,23 @@ window.dash = (() => {
 
 <div class="mm">
   <header class="mm-head" id="topo">
+    <div class="mm-brand"><span class="mm-logo"><img src="logo.png" alt="CVC Master Franquia DF &amp; MG" width="300" height="100"></span></div>
     <p class="mm-kicker">Disponibilidade Fretamento · lugares por rota</p>
     <h1 class="mm-title">Mapa da Mina</h1>
     <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
-    <nav class="mm-tabs" role="tablist" aria-label="Seções">
-      <button type="button" class="mm-tabbtn" role="tab" id="btn-divulgacao" data-tab="divulgacao" aria-selected="true">Divulgação</button>
-      <button type="button" class="mm-tabbtn" role="tab" id="btn-mapa" data-tab="mapa-geral" aria-selected="false">Mapa da Mina</button>
+    <nav class="mm-tabs" aria-label="Seções">
+      <a class="mm-cta" href="#divulgacao" data-show-on="mapa-geral">
+        <span class="mm-cta-k">Para o marketing</span>
+        <span class="mm-cta-t">Ver recomendações de divulgação</span>
+        <span class="mm-cta-a" aria-hidden="true">→</span>
+      </a>
+      <a class="mm-cta mm-cta-back" href="#mapa-geral" data-show-on="divulgacao" hidden>
+        <span class="mm-cta-a" aria-hidden="true">←</span>
+        <span class="mm-cta-t">Voltar ao Mapa da Mina</span>
+      </a>
     </nav>
   </header>
-<div id="divulgacao" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-divulgacao">
+<div id="divulgacao" class="mm-tab mm" role="region" aria-label="Recomendações de divulgação" hidden>
   <section class="mm-filters mm-div-ctrl" aria-label="Filtros da divulgação">
     <label for="d-uf">Estado de embarque<select id="d-uf" class="dash-select" data-draw="d-uf"></select></label>
     <label for="d-jan">Embarques nos próximos
@@ -211,7 +219,7 @@ window.dash = (() => {
     </dl>
   </details>
 </div>
-  <div id="mapa-geral" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-mapa" hidden>
+  <div id="mapa-geral" class="mm-tab mm" role="region" aria-label="Mapa da Mina">
 
   <section class="mm-filters" id="filtros" aria-label="Filtros">
     <label for="f-origem">Origem (malha)<select id="f-origem" class="dash-select" data-draw="f-origem" data-source="opcoes"></select></label>
@@ -680,7 +688,20 @@ body { overflow-x: clip; }
 </style>
 
 <style>
-.mm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.mm-brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.mm-logo { display: block; background: #ffffff; border-radius: 12px; padding: 6px 10px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+.mm-logo img { display: block; width: 180px; height: auto; max-width: 100%; }
+.mm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
+.mm-cta { display: inline-grid; grid-template-columns: 1fr auto; grid-template-areas: "k a" "t a"; align-items: center; column-gap: 18px; text-decoration: none; background: var(--yellow); color: var(--ink); border-radius: 14px; padding: 14px 22px; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); max-width: 100%; }
+.mm-cta:hover { background: color-mix(in oklab, var(--yellow) 88%, #ffffff); }
+.mm-cta:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
+.mm-cta-k { grid-area: k; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
+.mm-cta-t { grid-area: t; font-family: var(--font-anthropic-serif); font-weight: 800; font-size: clamp(18px, 2.4vw, 24px); letter-spacing: -.01em; line-height: 1.15; }
+.mm-cta-a { grid-area: a; font-size: 30px; font-weight: 800; line-height: 1; }
+.mm-cta-back { grid-template-columns: auto 1fr; grid-template-areas: "a t"; background: #ffffff; color: var(--blue); padding: 12px 20px; }
+.mm-cta-back:hover { background: var(--blue-soft); }
+.mm-cta-back .mm-cta-t { font-size: 18px; }
+@media (prefers-reduced-motion: no-preference) { .mm-cta { transition: transform .15s ease, background-color .15s ease; } .mm-cta:hover { transform: translateY(-2px); } }
 .mm-tabbtn { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; border: 1px solid color-mix(in oklab, #ffffff 45%, transparent); background: transparent; color: var(--hero-fg); cursor: pointer; }
 .mm-tabbtn:hover { background: color-mix(in oklab, #ffffff 12%, transparent); }
 .mm-tabbtn[aria-selected="true"] { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
@@ -990,16 +1011,15 @@ dash.draw('d-tabela', (tb) => {
 });
 
 (() => {
-  const btns = document.querySelectorAll('.mm-tabbtn');
   const show = (id) => {
-    if (!id || !document.getElementById(id)) id = 'divulgacao';
+    if (!id || !document.getElementById(id) || !document.getElementById(id).classList.contains('mm-tab')) id = 'mapa-geral';
     document.querySelectorAll('.mm-tab').forEach((p) => { p.hidden = p.id !== id; });
-    btns.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+    document.querySelectorAll('[data-show-on]').forEach((a) => { a.hidden = a.dataset.showOn !== id; });
     dash._render();
   };
-  btns.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
+  document.querySelectorAll('.mm-cta').forEach((a) => a.addEventListener('click', () => setTimeout(() => window.scrollTo({ top: 0 }), 0)));
   window.addEventListener('hashchange', () => show(location.hash.slice(1)));
-  window.mmShowInitial = () => show(location.hash.slice(1) || 'divulgacao');
+  window.mmShowInitial = () => show(location.hash.slice(1));
 })();
 </script>
 
