@@ -170,7 +170,7 @@ window.dash = (() => {
 
   <section class="mm-sec" id="mapa">
     <h2>Mapa de calor: lugares livres por rota e mês</h2>
-    <p>As 20 rotas com mais lugares disponíveis. Quanto mais vermelho, mais lugares sobrando para vender. Clique numa célula para filtrar a página por aquela rota e mês.</p>
+    <p>As 20 rotas com mais lugares disponíveis. Quanto mais azul, mais lugares sobrando para vender. Clique numa célula para filtrar a página por aquela rota e mês.</p>
     <div class="mm-legend"><span>poucos livres</span><i></i><span>muitos livres</span></div>
     <div class="mm-chart" data-draw="heat" data-source="matriz"></div>
   </section>
@@ -602,6 +602,8 @@ body { overflow-x: clip; }
 .mm-foot { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 12px; padding: 16px 20px; }
 .mm-foot summary { color: var(--blue); font-weight: 600; }
 .mm-tip strong { color: var(--blue); }
+.mm-tip[hidden] { display: none; }
+.mm-sec { align-content: start; }
 @media (max-width: 600px) {
   .mm-head::after { width: 140px; height: 140px; right: -50px; top: -50px; }
   .mm-filters { position: static; }
