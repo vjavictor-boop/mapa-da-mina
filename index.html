@@ -150,11 +150,67 @@ window.dash = (() => {
     <h1 class="mm-title">Mapa da Mina</h1>
     <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
     <nav class="mm-tabs" role="tablist" aria-label="Seções">
-      <button type="button" class="mm-tabbtn" role="tab" id="btn-mapa" data-tab="mapa-geral" aria-selected="true">Mapa da Mina</button>
-      <button type="button" class="mm-tabbtn" role="tab" id="btn-divulgacao" data-tab="divulgacao" aria-selected="false">Divulgação</button>
+      <button type="button" class="mm-tabbtn" role="tab" id="btn-divulgacao" data-tab="divulgacao" aria-selected="true">Divulgação</button>
+      <button type="button" class="mm-tabbtn" role="tab" id="btn-mapa" data-tab="mapa-geral" aria-selected="false">Mapa da Mina</button>
     </nav>
   </header>
-  <div id="mapa-geral" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-mapa">
+<div id="divulgacao" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-divulgacao">
+  <section class="mm-filters mm-div-ctrl" aria-label="Filtros da divulgação">
+    <label for="d-uf">Estado de embarque<select id="d-uf" class="dash-select" data-draw="d-uf"></select></label>
+    <label for="d-jan">Embarques nos próximos
+      <select id="d-jan" class="dash-select">
+        <option value="15">15 dias</option>
+        <option value="30">30 dias</option>
+        <option value="45">45 dias</option>
+        <option value="60" selected>60 dias</option>
+        <option value="90">90 dias</option>
+      </select>
+    </label>
+    <p class="mm-div-hoje" data-draw="d-hoje"></p>
+  </section>
+
+  <p class="mm-div-resumo" data-draw="d-resumo">—</p>
+
+  <section class="mm-sec" id="recomendacoes">
+    <h2>O que divulgar primeiro</h2>
+    <p>Os 6 destinos com mais lugares livres perto do embarque, já com texto sugerido para as peças. A ordem considera a quantidade de lugares e quanto falta para o voo sair.</p>
+    <div class="mm-recs" data-draw="d-cards"></div>
+  </section>
+
+  <section class="mm-sec" id="proximidade">
+    <h2>Lugares livres × proximidade do embarque</h2>
+    <p>Os 15 destinos com maior prioridade. Cada barra soma os lugares livres, dividida pelo prazo até o embarque: quanto mais amarelo, mais perto de sair. Passe o mouse para ver os números.</p>
+    <div class="mm-seg-legend mm-prazo-leg" data-draw="d-prazo-leg"></div>
+    <div class="mm-chart mm-prazos" data-draw="d-prazos"></div>
+  </section>
+
+  <section class="mm-sec" id="prazos">
+    <h2>Lugares livres por destino e prazo de embarque</h2>
+    <p>Todos os destinos com lugares na janela escolhida, ordenados pela prioridade de divulgação.</p>
+    <div class="mm-scroll">
+      <table class="mm-table mm-div-table">
+        <thead><tr><th>#</th><th>Destino</th><th class="n">Até 15 dias</th><th class="n">16 a 30</th><th class="n">31 a 60</th><th class="n">61 a 90</th><th class="n">Total livre</th><th>Próximo embarque</th><th>Prioridade</th></tr></thead>
+        <tbody data-draw="d-tabela"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="mm-foot" id="como-prioriza">
+    <summary>Como a prioridade é calculada</summary>
+    <dl>
+      <dt>Lugares livres</dt><dd>Soma do disponível dos voos com embarque entre hoje e o fim da janela escolhida, saindo do estado selecionado.</dd>
+      <dt>Peso por prazo</dt><dd>Cada lugar vale 3 pontos se o voo sai em até 15 dias, 2 pontos de 16 a 30 dias, 1,5 de 31 a 60 dias e 1 ponto depois disso. Lugar perto do embarque pesa mais porque sobra menos tempo para vender.</dd>
+      <dt>Pontuação</dt><dd>Soma dos pontos de todos os lugares livres do destino. Os destinos são ordenados por ela.</dd>
+      <dt>Urgente</dt><dd>200 lugares livres ou mais saem em até 30 dias, ou pelo menos 40% dos lugares livres saem nesse prazo (mínimo de 30 lugares).</dd>
+      <dt>Voos para puxar a campanha</dt><dd>Os três voos do destino com mais lugares livres, pesados pela proximidade do embarque.</dd>
+      <dt>Texto sugerido</dt><dd>O tema (Réveillon, férias, Carnaval) segue o período em que se concentram os lugares livres, não só o primeiro voo.</dd>
+      <dt>Alta</dt><dd>Não é urgente, mas o próximo embarque com lugares é em até 45 dias.</dd>
+      <dt>Planejar</dt><dd>Os lugares estão mais distantes; dá para preparar campanha com antecedência.</dd>
+      <dt>Estado de embarque</dt><dd>Estado da cidade da malha de origem do voo.</dd>
+    </dl>
+  </details>
+</div>
+  <div id="mapa-geral" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-mapa" hidden>
 
   <section class="mm-filters" id="filtros" aria-label="Filtros">
     <label for="f-origem">Origem (malha)<select id="f-origem" class="dash-select" data-draw="f-origem" data-source="opcoes"></select></label>
@@ -228,62 +284,6 @@ window.dash = (() => {
     </dl>
   </details>
   </div>
-<div id="divulgacao" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-divulgacao" hidden>
-  <section class="mm-filters mm-div-ctrl" aria-label="Filtros da divulgação">
-    <label for="d-uf">Estado de embarque<select id="d-uf" class="dash-select" data-draw="d-uf"></select></label>
-    <label for="d-jan">Embarques nos próximos
-      <select id="d-jan" class="dash-select">
-        <option value="15">15 dias</option>
-        <option value="30">30 dias</option>
-        <option value="45">45 dias</option>
-        <option value="60" selected>60 dias</option>
-        <option value="90">90 dias</option>
-      </select>
-    </label>
-    <p class="mm-div-hoje" data-draw="d-hoje"></p>
-  </section>
-
-  <p class="mm-div-resumo" data-draw="d-resumo">—</p>
-
-  <section class="mm-sec" id="recomendacoes">
-    <h2>O que divulgar primeiro</h2>
-    <p>Os 6 destinos com mais lugares livres perto do embarque, já com texto sugerido para as peças. A ordem considera a quantidade de lugares e quanto falta para o voo sair.</p>
-    <div class="mm-recs" data-draw="d-cards"></div>
-  </section>
-
-  <section class="mm-sec" id="proximidade">
-    <h2>Lugares livres × proximidade do embarque</h2>
-    <p>Os 15 destinos com maior prioridade. Cada barra soma os lugares livres, dividida pelo prazo até o embarque: quanto mais amarelo, mais perto de sair. Passe o mouse para ver os números.</p>
-    <div class="mm-seg-legend mm-prazo-leg" data-draw="d-prazo-leg"></div>
-    <div class="mm-chart mm-prazos" data-draw="d-prazos"></div>
-  </section>
-
-  <section class="mm-sec" id="prazos">
-    <h2>Lugares livres por destino e prazo de embarque</h2>
-    <p>Todos os destinos com lugares na janela escolhida, ordenados pela prioridade de divulgação.</p>
-    <div class="mm-scroll">
-      <table class="mm-table mm-div-table">
-        <thead><tr><th>#</th><th>Destino</th><th class="n">Até 15 dias</th><th class="n">16 a 30</th><th class="n">31 a 60</th><th class="n">61 a 90</th><th class="n">Total livre</th><th>Próximo embarque</th><th>Prioridade</th></tr></thead>
-        <tbody data-draw="d-tabela"></tbody>
-      </table>
-    </div>
-  </section>
-
-  <details class="mm-foot" id="como-prioriza">
-    <summary>Como a prioridade é calculada</summary>
-    <dl>
-      <dt>Lugares livres</dt><dd>Soma do disponível dos voos com embarque entre hoje e o fim da janela escolhida, saindo do estado selecionado.</dd>
-      <dt>Peso por prazo</dt><dd>Cada lugar vale 3 pontos se o voo sai em até 15 dias, 2 pontos de 16 a 30 dias, 1,5 de 31 a 60 dias e 1 ponto depois disso. Lugar perto do embarque pesa mais porque sobra menos tempo para vender.</dd>
-      <dt>Pontuação</dt><dd>Soma dos pontos de todos os lugares livres do destino. Os destinos são ordenados por ela.</dd>
-      <dt>Urgente</dt><dd>200 lugares livres ou mais saem em até 30 dias, ou pelo menos 40% dos lugares livres saem nesse prazo (mínimo de 30 lugares).</dd>
-      <dt>Voos para puxar a campanha</dt><dd>Os três voos do destino com mais lugares livres, pesados pela proximidade do embarque.</dd>
-      <dt>Texto sugerido</dt><dd>O tema (Réveillon, férias, Carnaval) segue o período em que se concentram os lugares livres, não só o primeiro voo.</dd>
-      <dt>Alta</dt><dd>Não é urgente, mas o próximo embarque com lugares é em até 45 dias.</dd>
-      <dt>Planejar</dt><dd>Os lugares estão mais distantes; dá para preparar campanha com antecedência.</dd>
-      <dt>Estado de embarque</dt><dd>Estado da cidade da malha de origem do voo.</dd>
-    </dl>
-  </details>
-</div>
 </div>
 
 <script>
@@ -991,14 +991,14 @@ dash.draw('d-tabela', (tb) => {
 (() => {
   const btns = document.querySelectorAll('.mm-tabbtn');
   const show = (id) => {
-    if (!document.getElementById(id)) id = 'mapa-geral';
+    if (!id || !document.getElementById(id)) id = 'divulgacao';
     document.querySelectorAll('.mm-tab').forEach((p) => { p.hidden = p.id !== id; });
     btns.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
     dash._render();
   };
   btns.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
   window.addEventListener('hashchange', () => show(location.hash.slice(1)));
-  window.mmShowInitial = () => show(location.hash.slice(1) || 'mapa-geral');
+  window.mmShowInitial = () => show(location.hash.slice(1) || 'divulgacao');
 })();
 </script>
 
