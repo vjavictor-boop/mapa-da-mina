@@ -7,28 +7,31 @@
 <meta name="description" content="Lugares disponíveis em fretamentos e bloqueios aéreos por rota e mês.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800&family=Inter:wght@400;500;600&display=swap">
 <style>
+/* Layout: faixa azul royal no topo, barra de filtros fixa, cartões brancos; amarelo marca o que é vendável. */
 :root {
-  --color-bg: #f7f8fa; --color-panel: #ffffff; --color-fg: #17202b; --color-fg-muted: #5b6573;
-  --color-border-line: #e1e5ea; --color-ok: #1f8a4c; --color-warn: #d08a00; --color-bad: #d23b2f;
-  --accent: #1e5fd8;
+  --blue: #1d3fc4; --blue-deep: #142c8f; --blue-soft: #e8edff; --yellow: #ffd200; --yellow-soft: #fff6c2; --ink: #111522;
+  --color-bg: #f3f5fb; --color-panel: #ffffff; --color-fg: #141a2e; --color-fg-muted: #5a6380;
+  --color-border-line: #dfe4f2; --color-ok: #1f8a4c; --color-warn: #c98a00; --color-bad: #d23b2f;
+  --accent: var(--blue); --heat: var(--blue); --hero-fg: #ffffff; --hero-muted: #c7d2ff;
   --font-anthropic-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-anthropic-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-anthropic-serif: "Archivo", "Inter", system-ui, sans-serif;
   --cds-font-size-caption: 13px; --cds-font-size-body: 15px; --cds-font-size-heading: 18px; --cds-font-size-title: 34px;
   --cds-font-weight-medium: 600;
   --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
   --cds-pad-lg: 16px; --cds-radius: 8px;
-  --cds-chart-muted: #c9d0d9; --cds-chart-axis: #b7bfc9; --cds-text-secondary: #5b6573;
-  --cds-surface-popover: #ffffff; --cds-border: #d5dae1; --cds-shadow-popover: 0 6px 20px rgba(20, 30, 45, .14);
+  --cds-chart-muted: #c9d3f2; --cds-chart-axis: #b3bedf; --cds-text-secondary: #5a6380;
+  --cds-surface-popover: #ffffff; --cds-border: #d3daf0; --cds-shadow-popover: 0 8px 24px rgba(20, 40, 120, .16);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #11151b; --color-panel: #1a2029; --color-fg: #e8ecf1; --color-fg-muted: #9aa5b3;
-    --color-border-line: #2b333e; --color-ok: #3fb672; --color-warn: #e0a42a; --color-bad: #ef5a4c;
-    --accent: #6c9cff;
-    --cds-chart-muted: #3a4452; --cds-chart-axis: #4a5462; --cds-text-secondary: #9aa5b3;
-    --cds-surface-popover: #1f2631; --cds-border: #333c48; --cds-shadow-popover: 0 6px 20px rgba(0, 0, 0, .45);
+    --blue: #6f8cff; --blue-deep: #13205c; --blue-soft: #1b2550; --yellow: #ffd84d; --yellow-soft: #3a3412;
+    --color-bg: #0b1026; --color-panel: #131a38; --color-fg: #e9edff; --color-fg-muted: #9ba6cc;
+    --color-border-line: #263063; --color-ok: #3fb672; --color-warn: #e0a42a; --color-bad: #ef5a4c;
+    --accent: var(--blue); --heat: #5b7cff; --hero-fg: #ffffff; --hero-muted: #aab8f0;
+    --cds-chart-muted: #2e3866; --cds-chart-axis: #3a4577; --cds-text-secondary: #9ba6cc;
+    --cds-surface-popover: #1a2247; --cds-border: #323d72; --cds-shadow-popover: 0 6px 20px rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
 }
@@ -446,7 +449,7 @@ dash.draw('heat', (el) => {
       if (!r) { td.className = 'mm-empty'; td.textContent = '·'; continue; }
       td.textContent = mmF(r.disponivel);
       const pct = Math.round(Math.max(0, r.disponivel) / max * 85);
-      td.style.background = `color-mix(in oklab, var(--color-bad) ${pct}%, var(--color-panel))`;
+      td.style.background = `color-mix(in oklab, var(--heat) ${pct}%, var(--color-panel))`; if (pct > 45) td.classList.add('mm-hot');
       td.dataset.source = 'matriz';
       td.dataset.field = 'disponivel';
       td.dataset.where = 'rota=' + mmEnc(r.rota) + '&mes=' + mmEnc(r.mes);
@@ -553,6 +556,63 @@ dash.draw('t-voos', (tb) => {
   }
 });
 </script>
+
+<style>
+/* Tema amarelo + azul royal (sobrepõe o estilo base do painel) */
+body { overflow-x: clip; }
+.page { padding-block: 0 56px; }
+.mm { gap: 28px; }
+.mm-head { margin-inline: calc(50% - 50vw); padding-inline: calc(50vw - 50% + 0px); padding-block: 36px 40px; background: var(--blue); color: var(--hero-fg); position: relative; overflow: hidden; }
+.mm-head::after { content: ""; position: absolute; right: -60px; top: -60px; width: 260px; height: 260px; background: var(--yellow); transform: rotate(18deg); opacity: .95; clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 70%); pointer-events: none; }
+.mm-head > * { position: relative; z-index: 1; max-width: 1240px; }
+.mm-kicker { color: var(--yellow); font-weight: 600; }
+.mm-title { font-family: var(--font-anthropic-serif); font-weight: 800; font-size: clamp(36px, 6vw, 60px); letter-spacing: -.02em; line-height: 1; text-transform: uppercase; }
+.mm-take { color: var(--hero-muted); font-size: clamp(16px, 2vw, 19px); max-width: 60ch; }
+.mm-take b { color: var(--hero-fg); background: color-mix(in oklab, var(--yellow) 0%, transparent); box-shadow: inset 0 -0.42em 0 color-mix(in oklab, var(--yellow) 70%, transparent); padding-inline: 2px; }
+.mm-filters { position: sticky; top: 0; z-index: 20; margin-top: -48px; background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 12px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(20, 40, 120, .12); }
+.mm-filters label { color: var(--blue); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; font-size: 11px; }
+.mm-filters .dash-select { border-color: var(--color-border-line); min-width: 11rem; }
+.mm-filters .dash-select:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.mm-reset { background-color: var(--yellow); color: var(--ink); border-color: var(--yellow); font-weight: 600; padding: 8px 14px; }
+.mm-reset:hover { background-color: color-mix(in oklab, var(--yellow) 85%, #000); }
+.mm-active { color: var(--blue); font-weight: 600; margin-top: -16px; }
+.mm-kpis { grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr)); }
+.mm-card { border-radius: 12px; box-shadow: 0 1px 2px rgba(20, 40, 120, .06); }
+.mm-kpi-l { color: var(--blue); font-weight: 600; font-size: 11px; }
+.mm-kpi-v { font-family: var(--font-anthropic-serif); font-weight: 800; font-size: clamp(26px, 3vw, 34px); letter-spacing: -.01em; }
+.mm-kpi-hot { background: var(--yellow); border-color: var(--yellow); }
+.mm-kpi-hot .mm-kpi-v, .mm-kpi-hot .mm-kpi-l, .mm-kpi-hot .mm-kpi-n { color: var(--ink); }
+.mm-sec, .mm-grid2 > .mm-sec { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 12px; padding: 20px; }
+.mm-grid2 { gap: 28px; }
+.mm-sec h2 { font-family: var(--font-anthropic-serif); font-weight: 800; font-size: 20px; letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+.mm-sec h2::before { content: ""; width: 10px; height: 22px; background: var(--yellow); border-radius: 2px; flex: none; }
+.mm-legend i { background: linear-gradient(90deg, var(--color-panel), color-mix(in oklab, var(--heat) 85%, var(--color-panel))); }
+.mm-heat td.mm-hot { color: #ffffff; font-weight: 600; }
+.mm-heat td:hover { outline: 2px solid var(--yellow); outline-offset: -2px; }
+.mm-heat thead th { color: var(--blue); }
+.mm-heat tbody th { background: var(--color-panel); }
+.mm-bar:hover { background: var(--blue-soft); }
+.mm-bar-track { background: var(--blue-soft); border-radius: 2px; }
+.mm-table th { color: var(--blue); text-transform: uppercase; letter-spacing: .04em; font-size: 11px; border-bottom: 2px solid var(--blue); }
+.mm-table tbody tr:hover { background: var(--yellow-soft); }
+.mm-table tbody tr:nth-child(-n+3) td:first-child { font-weight: 600; }
+.mm-pill.hi { background: var(--yellow); color: var(--ink); }
+.mm-pill.md { background: color-mix(in oklab, var(--blue) 18%, transparent); }
+.mm-pill.lo { background: var(--blue); color: #ffffff; }
+.mm-foot { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: 12px; padding: 16px 20px; }
+.mm-foot summary { color: var(--blue); font-weight: 600; }
+.mm-tip strong { color: var(--blue); }
+@media (max-width: 600px) {
+  .mm-head::after { width: 140px; height: 140px; right: -50px; top: -50px; }
+  .mm-filters { position: static; }
+  .mm-filters label, .mm-filters .dash-select { width: 100%; }
+  .mm-sec, .mm-grid2 > .mm-sec { padding: 16px 12px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mm-card, .mm-sec { transition: box-shadow .2s ease; }
+  .mm-card:hover { box-shadow: 0 8px 22px rgba(20, 40, 120, .12); }
+}
+</style>
 
 <script>
 dash._render();
