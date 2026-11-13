@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa da Mina</title>
+<meta name="description" content="Lugares disponíveis em fretamentos e bloqueios aéreos por rota e mês.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400&display=swap">
+<style>
+:root {
+  --color-bg: #f7f8fa; --color-panel: #ffffff; --color-fg: #17202b; --color-fg-muted: #5b6573;
+  --color-border-line: #e1e5ea; --color-ok: #1f8a4c; --color-warn: #d08a00; --color-bad: #d23b2f;
+  --accent: #1e5fd8;
+  --font-anthropic-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-anthropic-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --cds-font-size-caption: 13px; --cds-font-size-body: 15px; --cds-font-size-heading: 18px; --cds-font-size-title: 34px;
+  --cds-font-weight-medium: 600;
+  --cds-gap-xs: 4px; --cds-gap-sm: 8px; --cds-gap-md: 12px; --cds-gap-lg: 20px; --cds-gap-xl: 32px;
+  --cds-pad-lg: 16px; --cds-radius: 8px;
+  --cds-chart-muted: #c9d0d9; --cds-chart-axis: #b7bfc9; --cds-text-secondary: #5b6573;
+  --cds-surface-popover: #ffffff; --cds-border: #d5dae1; --cds-shadow-popover: 0 6px 20px rgba(20, 30, 45, .14);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #11151b; --color-panel: #1a2029; --color-fg: #e8ecf1; --color-fg-muted: #9aa5b3;
+    --color-border-line: #2b333e; --color-ok: #3fb672; --color-warn: #e0a42a; --color-bad: #ef5a4c;
+    --accent: #6c9cff;
+    --cds-chart-muted: #3a4452; --cds-chart-axis: #4a5462; --cds-text-secondary: #9aa5b3;
+    --cds-surface-popover: #1f2631; --cds-border: #333c48; --cds-shadow-popover: 0 6px 20px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--color-bg); color: var(--color-fg); font: 15px/1.5 var(--font-anthropic-sans); }
+.page { max-width: 1240px; margin: 0 auto; padding-block: 32px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.dash-select { font: inherit; font-size: var(--cds-font-size-body); color: var(--color-fg); background-color: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 6px 10px; }
+.mm-loading { color: var(--color-fg-muted); }
+@media (max-width: 520px) { :root { --cds-font-size-title: 28px; } }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+// Versão independente da API do painel: calcula os dados no navegador a partir de voos.csv.
+window.dash = (() => {
+  const defaults = { origem: '', destino: '', mes: '', cia: '' };
+  let params = { ...defaults };
+  const sources = { voos: { status: 'loading', data: [] } };
+  const calcs = {}, draws = [], cache = {};
+  const get = (id) => {
+    if (sources[id]) return sources[id];
+    if (cache[id]) return cache[id];
+    const c = calcs[id];
+    if (!c) return { status: 'missing', data: [] };
+    const ins = c.inputs.map(get);
+    const bad = ins.find((x) => x.status !== 'ok');
+    if (bad) return { status: bad.status, data: null };
+    try { return (cache[id] = { status: 'ok', data: c.fn(...ins.map((x) => x.data)) }); }
+    catch (e) { console.error(e); return { status: 'error', data: null }; }
+  };
+  const render = () => {
+    for (const k of Object.keys(cache)) delete cache[k];
+    for (const [name, fn] of draws) document.querySelectorAll('[data-draw="' + name + '"]').forEach((el) => { try { fn(el); } catch (e) { console.error(e); } });
+  };
+  return {
+    colors: ['var(--accent)'],
+    calc: (id, o) => { calcs[id] = o; },
+    draw: (name, fn) => { draws.push([name, fn]); },
+    data: get,
+    params: () => ({ ...params }),
+    setParams: (p) => { for (const [k, v] of Object.entries(p)) params[k] = v == null ? '' : v; render(); },
+    resetParams: () => { params = { ...defaults }; render(); },
+    _load: (rows, status) => { sources.voos = { status: status || 'ok', data: rows || [] }; render(); },
+    _render: render
+  };
+})();
+</script>
+</head>
+<body>
+<main class="page">
+<style>
+.mm { display: grid; gap: var(--cds-gap-xl); font-family: var(--font-anthropic-sans); color: var(--color-fg); }
+.mm-head { display: grid; gap: var(--cds-gap-sm); }
+.mm-kicker { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); text-transform: uppercase; letter-spacing: .07em; margin: 0; }
+.mm-title { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+.mm-take { font-size: var(--cds-font-size-heading); line-height: 1.45; max-width: 62ch; margin: 0; text-wrap: pretty; }
+.mm-take b { font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; }
+.mm-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); align-items: end; }
+.mm-filters label { display: grid; gap: var(--cds-gap-xs); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); min-width: 0; }
+.mm-filters .dash-select { min-width: 10rem; max-width: 100%; }
+.mm-reset { font: inherit; font-size: var(--cds-font-size-caption); color: var(--color-fg); background-color: transparent; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: 6px 12px; cursor: pointer; }
+.mm-reset:hover { background-color: var(--color-panel); }
+.mm-reset:focus-visible, .mm-heat td:focus-visible, .mm-click:focus-visible { outline: 2px solid var(--color-fg); outline-offset: 1px; }
+.mm-active { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin: 0; min-height: 1.2em; }
+.mm-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: var(--cds-gap-md); }
+.mm-card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); min-width: 0; display: grid; gap: var(--cds-gap-xs); align-content: start; }
+.mm-kpi-l { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-transform: uppercase; letter-spacing: .06em; }
+.mm-kpi-v { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.mm-kpi-n { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mm-kpi-hot .mm-kpi-v { color: var(--color-bad); }
+.mm-sec { display: grid; gap: var(--cds-gap-md); min-width: 0; }
+.mm-sec h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+.mm-sec > p { margin: 0; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); max-width: 70ch; }
+.mm-grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: var(--cds-gap-xl); }
+.mm-chart { position: relative; min-height: 220px; min-width: 0; }
+.mm-scroll { overflow-x: auto; max-width: 100%; }
+.mm-heat { border-collapse: separate; border-spacing: 2px; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.mm-heat th { font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: 4px 6px; white-space: nowrap; }
+.mm-heat thead th { text-align: center; }
+.mm-heat tbody th { text-align: left; color: var(--color-fg); position: sticky; left: 0; background: var(--color-bg); z-index: 1; }
+.mm-heat td { min-width: 3.4rem; text-align: center; padding: 6px 4px; border-radius: 3px; cursor: pointer; color: var(--color-fg); }
+.mm-heat td.mm-empty { cursor: default; color: var(--color-fg-muted); }
+.mm-legend { display: flex; align-items: center; gap: var(--cds-gap-sm); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); flex-wrap: wrap; }
+.mm-legend i { display: inline-block; width: 120px; max-width: 40vw; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--color-panel), color-mix(in oklab, var(--color-bad) 85%, var(--color-panel))); border: 1px solid var(--color-border-line); }
+.mm-bars { display: grid; gap: 6px; }
+.mm-bar { display: grid; grid-template-columns: minmax(0, 9.5rem) 1fr auto; gap: var(--cds-gap-sm); align-items: center; font-size: var(--cds-font-size-caption); cursor: pointer; border-radius: 3px; padding: 2px 0; }
+.mm-bar:hover { background: var(--color-panel); }
+.mm-bar span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-bar-track { height: 14px; position: relative; }
+.mm-bar-fill { position: absolute; inset: 0 auto 0 0; border-radius: 2px; }
+.mm-bar b { font-weight: var(--cds-font-weight-medium); font-variant-numeric: tabular-nums; text-align: right; min-width: 3.5rem; }
+.mm-svg text { font-size: var(--cds-font-size-caption); fill: var(--cds-text-secondary); font-variant-numeric: tabular-nums; }
+.mm-svg text.mm-val { fill: var(--color-fg); }
+.mm-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.mm-table th, .mm-table td { padding: 7px 8px; border-bottom: 1px solid var(--color-border-line); text-align: left; white-space: nowrap; }
+.mm-table th { color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); }
+.mm-table .n { text-align: right; }
+.mm-table tbody tr { cursor: pointer; }
+.mm-table tbody tr:hover { background: var(--color-panel); }
+.mm-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: var(--cds-font-weight-medium); }
+.mm-pill.hi { background: color-mix(in oklab, var(--color-bad) 22%, transparent); }
+.mm-pill.md { background: color-mix(in oklab, var(--color-warn) 25%, transparent); }
+.mm-pill.lo { background: color-mix(in oklab, var(--color-ok) 22%, transparent); }
+.mm-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-popover); border-radius: var(--cds-radius); padding: 8px 10px; font-size: var(--cds-font-size-caption); display: grid; gap: 2px; max-width: 260px; }
+.mm-tip div { color: var(--cds-text-secondary); font-variant-numeric: tabular-nums; }
+.mm-foot { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mm-foot summary { cursor: pointer; color: var(--color-fg); }
+.mm-foot dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; max-width: 70ch; }
+.mm-foot dt { font-weight: var(--cds-font-weight-medium); color: var(--color-fg); }
+.mm-foot dd { margin: 0; }
+[data-dash-source-state=refreshing] { opacity: .5; }
+</style>
+
+<div class="mm">
+  <header class="mm-head" id="topo">
+    <p class="mm-kicker">Disponibilidade Fretamento · lugares por rota</p>
+    <h1 class="mm-title">Mapa da Mina</h1>
+    <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
+  </header>
+
+  <section class="mm-filters" id="filtros" aria-label="Filtros">
+    <label for="f-origem">Origem (malha)<select id="f-origem" class="dash-select" data-draw="f-origem" data-source="opcoes"></select></label>
+    <label for="f-destino">Destino<select id="f-destino" class="dash-select" data-draw="f-destino" data-source="opcoes"></select></label>
+    <label for="f-mes">Mês de embarque<select id="f-mes" class="dash-select" data-draw="f-mes" data-source="opcoes"></select></label>
+    <label for="f-cia">Companhia<select id="f-cia" class="dash-select" data-draw="f-cia" data-source="opcoes"></select></label>
+    <button type="button" class="mm-reset" id="limpar">Limpar filtros</button>
+  </section>
+  <p class="mm-active" data-draw="ativo"></p>
+
+  <section class="mm-kpis" id="totais" aria-label="Totais">
+    <div class="mm-card mm-kpi-hot"><span class="mm-kpi-l">Disponível</span><span class="mm-kpi-v" data-draw="k-disp" data-source="kpi" data-field="disponivel" data-row="0">—</span><span class="mm-kpi-n">lugares ainda à venda</span></div>
+    <div class="mm-card"><span class="mm-kpi-l">Oferta</span><span class="mm-kpi-v" data-draw="k-oferta" data-source="kpi" data-field="oferta" data-row="0">—</span><span class="mm-kpi-n">lugares bloqueados</span></div>
+    <div class="mm-card"><span class="mm-kpi-l">Ocupados</span><span class="mm-kpi-v" data-draw="k-ocup" data-source="kpi" data-field="ocupados" data-row="0">—</span><span class="mm-kpi-n">confirmados + reservados</span></div>
+    <div class="mm-card"><span class="mm-kpi-l">Ocupação</span><span class="mm-kpi-v" data-draw="k-pct" data-source="kpi" data-field="ocupacao" data-row="0">—</span><span class="mm-kpi-n">ocupados ÷ oferta</span></div>
+    <div class="mm-card"><span class="mm-kpi-l">Voos</span><span class="mm-kpi-v" data-draw="k-voos" data-source="kpi" data-field="voos" data-row="0">—</span><span class="mm-kpi-n">no filtro atual</span></div>
+  </section>
+
+  <section class="mm-sec" id="mapa">
+    <h2>Mapa de calor: lugares livres por rota e mês</h2>
+    <p>As 20 rotas com mais lugares disponíveis. Quanto mais vermelho, mais lugares sobrando para vender. Clique numa célula para filtrar a página por aquela rota e mês.</p>
+    <div class="mm-legend"><span>poucos livres</span><i></i><span>muitos livres</span></div>
+    <div class="mm-chart" data-draw="heat" data-source="matriz"></div>
+  </section>
+
+  <div class="mm-grid2">
+    <section class="mm-sec" id="por-mes">
+      <h2>Ocupados e livres por mês de embarque</h2>
+      <p>Barra cheia = oferta. Parte colorida = lugares ainda livres.</p>
+      <div class="mm-chart" data-draw="meses" data-source="meses"></div>
+    </section>
+    <section class="mm-sec" id="por-destino">
+      <h2>Destinos com mais lugares livres</h2>
+      <p>Os 15 destinos com mais lugares disponíveis. Clique para filtrar.</p>
+      <div class="mm-chart mm-bars" data-draw="destinos" data-source="destinos"></div>
+    </section>
+  </div>
+
+  <section class="mm-sec" id="rotas">
+    <h2>Onde vender primeiro: ranking de rotas</h2>
+    <p>As 30 rotas (cidade da malha → destino) com mais lugares livres. Clique numa linha para filtrar.</p>
+    <div class="mm-scroll">
+      <table class="mm-table" data-source="rotas" data-row-key="rota">
+        <thead><tr><th data-field="rota">Rota</th><th class="n" data-field="voos">Voos</th><th class="n" data-field="oferta">Oferta</th><th class="n" data-field="ocupados">Ocupados</th><th class="n" data-field="ocupacao">Ocupação</th><th class="n" data-field="disponivel">Disponível</th></tr></thead>
+        <tbody data-draw="t-rotas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mm-sec" id="voos">
+    <h2>Voos com mais lugares livres</h2>
+    <p>Os 60 voos com mais lugares disponíveis no filtro atual, do maior para o menor.</p>
+    <div class="mm-scroll">
+      <table class="mm-table" data-source="topvoos" data-row-key="rank">
+        <thead><tr><th data-field="rank">#</th><th data-field="data">Embarque</th><th data-field="rota">Rota</th><th data-field="itinerario">Itinerário</th><th data-field="cia">Companhia</th><th class="n" data-field="oferta">Oferta</th><th class="n" data-field="ocupacao">Ocupação</th><th class="n" data-field="disponivel">Disponível</th><th data-field="retorno">Retorno</th></tr></thead>
+        <tbody data-draw="t-voos"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="mm-foot" id="glossario">
+    <summary>Como ler os números e de onde vêm</summary>
+    <dl>
+      <dt>Oferta</dt><dd>Lugares bloqueados no voo (fretamentos e bloqueios em voos regulares).</dd>
+      <dt>Ocupados</dt><dd>Confirmados + reservados. Reservado não está contido em confirmado.</dd>
+      <dt>Ocupação</dt><dd>(Confirmados + reservados) ÷ oferta.</dd>
+      <dt>Disponível</dt><dd>Oferta − ocupados. Valor negativo indica mais vendidos que a oferta.</dd>
+      <dt>Rota</dt><dd>Cidade da malha de origem → cidade de destino. O itinerário mostra as conexões.</dd>
+      <dt>Datas</dt><dd>Todas são datas de embarque.</dd>
+      <dt>Fonte</dt><dd>Power BI "Disponibilidade Fretamento", página Tabela_Exportação, exportada com dados até 13/11/2026. Bloqueios terrestres (CIA TERRESTRE) já vêm excluídos pelo relatório.</dd>
+    </dl>
+  </details>
+</div>
+
+<script>
+window.mmF = d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['R$', ''] }).format(',d');
+window.mmMes = (s) => {
+  const n = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const [y, m] = String(s).split('-');
+  return n[+m - 1] + '/' + y.slice(2);
+};
+window.mmData = (s) => { const [y, m, d] = String(s || '').split('-'); return d ? d + '/' + m + '/' + y.slice(2) : ''; };
+window.mmEnc = (s) => String(s).replace(/%/g, '%25').replace(/&/g, '%26').replace(/=/g, '%3D');
+window.mmTip = (host) => {
+  const t = document.createElement('div');
+  t.className = 'mm-tip';
+  t.hidden = true;
+  host.appendChild(t);
+  return {
+    show(ev, lines) {
+      t.replaceChildren(...lines.map((l, i) => { const d = document.createElement(i ? 'div' : 'strong'); d.textContent = l; return d; }));
+      t.hidden = false;
+      const r = host.getBoundingClientRect();
+      let x = ev.clientX - r.left + 14, y = ev.clientY - r.top + 14;
+      const w = t.offsetWidth;
+      if (x + w > r.width) x = Math.max(0, ev.clientX - r.left - w - 14);
+      t.style.left = x + 'px';
+      t.style.top = y + 'px';
+    },
+    hide() { t.hidden = true; }
+  };
+};
+window.mmPill = (pct) => {
+  const s = document.createElement('span');
+  s.className = 'mm-pill ' + (pct < 40 ? 'hi' : pct < 75 ? 'md' : 'lo');
+  s.textContent = pct + '%';
+  return s;
+};
+
+dash.calc('base', {
+  inputs: ['voos'],
+  title: 'Voos no filtro',
+  description: 'Voos do arquivo com os filtros da página aplicados e números convertidos.',
+  fn: (voos) => {
+    const p = dash.params();
+    return voos
+      .filter((r) => (!p.origem || r.origem === p.origem) && (!p.destino || r.destino === p.destino) && (!p.mes || r.mes === p.mes) && (!p.cia || r.cia === p.cia))
+      .map((r) => ({ ...r, oferta: +r.oferta, confirmado: +r.confirmado, reservado: +r.reservado, disponivel: +r.disponivel }));
+  }
+});
+
+dash.calc('kpi', {
+  inputs: ['base'],
+  title: 'Totais do filtro',
+  description: 'Soma de oferta, ocupados (confirmados + reservados) e disponível; ocupação em % arredondada.',
+  fn: (base) => {
+    let o = 0, c = 0, r = 0, d = 0;
+    for (const v of base) { o += v.oferta; c += v.confirmado; r += v.reservado; d += v.disponivel; }
+    return [{ voos: base.length, oferta: o, ocupados: c + r, ocupacao: o ? Math.floor((c + r) / o * 100) : 0, disponivel: d }];
+  }
+});
+
+dash.calc('rotas', {
+  inputs: ['base'],
+  title: 'Por rota',
+  description: 'Voos agrupados por cidade da malha → destino, ordenados por lugares disponíveis.',
+  fn: (base) => {
+    const m = new Map();
+    for (const v of base) {
+      let g = m.get(v.rota);
+      if (!g) { g = { rota: v.rota, origem: v.origem, destino: v.destino, voos: 0, oferta: 0, ocupados: 0, disponivel: 0 }; m.set(v.rota, g); }
+      g.voos++; g.oferta += v.oferta; g.ocupados += v.confirmado + v.reservado; g.disponivel += v.disponivel;
+    }
+    return [...m.values()].map((g) => ({ ...g, ocupacao: g.oferta ? Math.floor(g.ocupados / g.oferta * 100) : 0 })).sort((a, b) => b.disponivel - a.disponivel);
+  }
+});
+
+dash.calc('destinos', {
+  inputs: ['base'],
+  title: 'Por destino',
+  description: 'Voos agrupados por cidade de destino, ordenados por lugares disponíveis.',
+  fn: (base) => {
+    const m = new Map();
+    for (const v of base) {
+      let g = m.get(v.destino);
+      if (!g) { g = { destino: v.destino, voos: 0, oferta: 0, ocupados: 0, disponivel: 0 }; m.set(v.destino, g); }
+      g.voos++; g.oferta += v.oferta; g.ocupados += v.confirmado + v.reservado; g.disponivel += v.disponivel;
+    }
+    return [...m.values()].map((g) => ({ ...g, ocupacao: g.oferta ? Math.floor(g.ocupados / g.oferta * 100) : 0 })).sort((a, b) => b.disponivel - a.disponivel);
+  }
+});
+
+dash.calc('meses', {
+  inputs: ['base'],
+  title: 'Por mês de embarque',
+  description: 'Oferta, ocupados e disponível somados por mês de embarque.',
+  fn: (base) => {
+    const m = new Map();
+    for (const v of base) {
+      let g = m.get(v.mes);
+      if (!g) { g = { mes: v.mes, voos: 0, oferta: 0, ocupados: 0, disponivel: 0 }; m.set(v.mes, g); }
+      g.voos++; g.oferta += v.oferta; g.ocupados += v.confirmado + v.reservado; g.disponivel += v.disponivel;
+    }
+    return [...m.values()].map((g) => ({ ...g, ocupacao: g.oferta ? Math.floor(g.ocupados / g.oferta * 100) : 0 })).sort((a, b) => a.mes.localeCompare(b.mes));
+  }
+});
+
+dash.calc('destaque', {
+  inputs: ['meses'],
+  title: 'Mês com mais lugares livres',
+  description: 'O mês de embarque com maior soma de lugares disponíveis.',
+  fn: (meses) => {
+    if (!meses.length) return [];
+    const n = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const top = meses.reduce((a, b) => (b.disponivel > a.disponivel ? b : a));
+    const [y, mm] = top.mes.split('-');
+    return [{ mes: top.mes, mes_nome: n[+mm - 1] + ' de ' + y, disponivel: top.disponivel }];
+  }
+});
+
+dash.calc('matriz', {
+  inputs: ['rotas', 'base'],
+  title: 'Rota × mês',
+  description: 'Lugares disponíveis por mês para as 20 rotas com mais lugares livres.',
+  fn: (rotas, base) => {
+    const top = new Set(rotas.slice(0, 20).map((r) => r.rota));
+    const m = new Map();
+    for (const v of base) {
+      if (!top.has(v.rota)) continue;
+      const k = v.rota + '|' + v.mes;
+      let g = m.get(k);
+      if (!g) { g = { rota: v.rota, origem: v.origem, destino: v.destino, mes: v.mes, voos: 0, oferta: 0, ocupados: 0, disponivel: 0 }; m.set(k, g); }
+      g.voos++; g.oferta += v.oferta; g.ocupados += v.confirmado + v.reservado; g.disponivel += v.disponivel;
+    }
+    return [...m.values()];
+  }
+});
+
+dash.calc('topvoos', {
+  inputs: ['base'],
+  title: 'Voos com mais lugares livres',
+  description: 'Os 60 voos do filtro com mais lugares disponíveis.',
+  fn: (base) => base
+    .filter((v) => v.disponivel > 0)
+    .sort((a, b) => b.disponivel - a.disponivel || a.data.localeCompare(b.data))
+    .slice(0, 60)
+    .map((v, i) => ({ rank: i + 1, data: v.data, rota: v.rota, origem: v.origem, destino: v.destino, mes: v.mes, itinerario: v.itinerario, cia: v.cia, oferta: v.oferta, ocupacao: v.oferta ? Math.floor((v.confirmado + v.reservado) / v.oferta * 100) : 0, disponivel: v.disponivel, retorno: v.retorno }))
+});
+
+dash.calc('opcoes', {
+  inputs: ['voos'],
+  title: 'Opções dos filtros',
+  description: 'Valores distintos de origem, destino, mês e companhia no arquivo.',
+  fn: (voos) => {
+    const out = [];
+    for (const campo of ['origem', 'destino', 'mes', 'cia']) {
+      const vals = [...new Set(voos.map((r) => r[campo]).filter(Boolean))].sort();
+      for (const valor of vals) out.push({ campo, valor });
+    }
+    return out;
+  }
+});
+
+document.querySelectorAll('#limpar').forEach((b) => b.addEventListener('click', () => dash.resetParams()));
+</script>
+
+<script>
+const mmKpi = { 'k-disp': 'disponivel', 'k-oferta': 'oferta', 'k-ocup': 'ocupados', 'k-pct': 'ocupacao', 'k-voos': 'voos', 'tk-disp': 'disponivel', 'tk-voos': 'voos' };
+for (const [name, f] of Object.entries(mmKpi)) {
+  dash.draw(name, (el) => {
+    const s = dash.data('kpi');
+    const row = s.status === 'ok' && s.data && s.data[0];
+    el.textContent = row ? (f === 'ocupacao' ? row[f] + '%' : mmF(row[f])) : '—';
+  });
+}
+dash.draw('tk-rota', (el) => { const s = dash.data('rotas'); el.textContent = s.status === 'ok' && s.data[0] ? s.data[0].rota : '—'; });
+dash.draw('tk-rota-n', (el) => { const s = dash.data('rotas'); el.textContent = s.status === 'ok' && s.data[0] ? mmF(s.data[0].disponivel) : '—'; });
+dash.draw('tk-mes', (el) => { const s = dash.data('destaque'); el.textContent = s.status === 'ok' && s.data[0] ? s.data[0].mes_nome : '—'; });
+dash.draw('tk-mes-n', (el) => { const s = dash.data('destaque'); el.textContent = s.status === 'ok' && s.data[0] ? mmF(s.data[0].disponivel) : '—'; });
+
+const mmAll = { origem: 'Todas as origens', destino: 'Todos os destinos', mes: 'Todos os meses', cia: 'Todas as companhias' };
+for (const k of Object.keys(mmAll)) {
+  dash.draw('f-' + k, (sel) => {
+    const g = dash.data('opcoes');
+    const vals = g.status === 'ok' ? g.data.filter((r) => r.campo === k).map((r) => r.valor) : [];
+    sel.replaceChildren(new Option(mmAll[k], ''), ...vals.map((v) => new Option(k === 'mes' ? mmMes(v) : v, v)));
+    sel.value = dash.params()[k] ?? '';
+    sel.onchange = () => dash.setParams({ [k]: sel.value || null });
+  });
+}
+dash.draw('ativo', (el) => {
+  const p = dash.params();
+  const parts = [];
+  if (p.origem) parts.push('origem ' + p.origem);
+  if (p.destino) parts.push('destino ' + p.destino);
+  if (p.mes) parts.push(mmMes(p.mes));
+  if (p.cia) parts.push(p.cia);
+  el.textContent = parts.length ? 'Filtrando por: ' + parts.join(' · ') : '';
+});
+
+dash.draw('heat', (el) => {
+  const s = dash.data('matriz');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = s.status === 'error' ? 'Falha ao carregar' : '—'; return; }
+  const rows = s.data;
+  if (!rows.length) { el.textContent = 'Nenhum voo neste filtro.'; return; }
+  const rk = dash.data('rotas');
+  const order = rk.status === 'ok' ? rk.data.slice(0, 20).map((r) => r.rota) : [...new Set(rows.map((r) => r.rota))];
+  const meses = [...new Set(rows.map((r) => r.mes))].sort();
+  const max = d3.max(rows, (r) => r.disponivel) || 1;
+  const idx = new Map(rows.map((r) => [r.rota + '|' + r.mes, r]));
+  const wrap = document.createElement('div');
+  wrap.className = 'mm-scroll';
+  const tb = document.createElement('table');
+  tb.className = 'mm-heat';
+  const thead = tb.createTHead().insertRow();
+  const h0 = document.createElement('th'); h0.textContent = 'Rota'; thead.appendChild(h0);
+  for (const m of meses) { const th = document.createElement('th'); th.textContent = mmMes(m); thead.appendChild(th); }
+  const body = tb.createTBody();
+  const tip = mmTip(el);
+  for (const rota of order) {
+    const tr = body.insertRow();
+    const th = document.createElement('th'); th.scope = 'row'; th.textContent = rota; tr.appendChild(th);
+    for (const m of meses) {
+      const td = tr.insertCell();
+      const r = idx.get(rota + '|' + m);
+      if (!r) { td.className = 'mm-empty'; td.textContent = '·'; continue; }
+      td.textContent = mmF(r.disponivel);
+      const pct = Math.round(Math.max(0, r.disponivel) / max * 85);
+      td.style.background = `color-mix(in oklab, var(--color-bad) ${pct}%, var(--color-panel))`;
+      td.dataset.source = 'matriz';
+      td.dataset.field = 'disponivel';
+      td.dataset.where = 'rota=' + mmEnc(r.rota) + '&mes=' + mmEnc(r.mes);
+      td.tabIndex = 0;
+      const lines = [r.rota + ' · ' + mmMes(r.mes), mmF(r.disponivel) + ' livres de ' + mmF(r.oferta), 'Ocupação ' + (r.oferta ? Math.floor(r.ocupados / r.oferta * 100) : 0) + '% · ' + mmF(r.voos) + ' voos'];
+      td.addEventListener('mouseenter', (ev) => tip.show(ev, lines));
+      td.addEventListener('mousemove', (ev) => tip.show(ev, lines));
+      td.addEventListener('mouseleave', () => tip.hide());
+      const go = () => dash.setParams({ origem: r.origem, destino: r.destino, mes: r.mes });
+      td.addEventListener('click', go);
+      td.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); go(); } });
+    }
+  }
+  wrap.appendChild(tb);
+  el.insertBefore(wrap, el.firstChild);
+});
+
+dash.draw('meses', (el) => {
+  const s = dash.data('meses');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = s.status === 'error' ? 'Falha ao carregar' : '—'; return; }
+  const data = s.data;
+  if (!data.length) { el.textContent = 'Nenhum voo neste filtro.'; return; }
+  const W = Math.max(260, el.clientWidth || 600), H = 240, m = { t: 22, r: 4, b: 26, l: 4 };
+  const x = d3.scaleBand().domain(data.map((d) => d.mes)).range([m.l, W - m.r]).padding(0.22);
+  const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.oferta) || 1]).range([H - m.b, m.t]);
+  const svg = d3.select(el).append('svg').attr('class', 'mm-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', 'Lugares ocupados e livres por mês de embarque');
+  svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--cds-chart-axis)');
+  const tip = mmTip(el);
+  const g = svg.selectAll('g.col').data(data).join('g').attr('class', 'col');
+  g.append('rect').attr('x', (d) => x(d.mes)).attr('width', x.bandwidth()).attr('y', (d) => y(d.ocupados)).attr('height', (d) => Math.max(0, y(0) - y(d.ocupados))).style('fill', 'var(--cds-chart-muted)');
+  g.append('rect').attr('x', (d) => x(d.mes)).attr('width', x.bandwidth())
+    .attr('y', (d) => y(d.ocupados + Math.max(0, d.disponivel))).attr('height', (d) => Math.max(0, y(d.ocupados) - y(d.ocupados + Math.max(0, d.disponivel))))
+    .style('fill', dash.colors[0]);
+  g.append('rect').attr('x', (d) => x(d.mes)).attr('width', x.bandwidth()).attr('y', m.t).attr('height', H - m.b - m.t).style('fill', 'transparent')
+    .on('mousemove', (ev, d) => tip.show(ev, [mmMes(d.mes), mmF(d.disponivel) + ' livres', mmF(d.ocupados) + ' ocupados de ' + mmF(d.oferta), 'Ocupação ' + d.ocupacao + '%']))
+    .on('mouseleave', () => tip.hide())
+    .on('click', (ev, d) => dash.setParams({ mes: d.mes }))
+    .style('cursor', 'pointer');
+  const showVals = x.bandwidth() >= 34;
+  if (showVals) {
+    g.append('text').attr('class', 'mm-val').attr('x', (d) => x(d.mes) + x.bandwidth() / 2).attr('y', (d) => y(d.oferta) - 6).attr('text-anchor', 'middle').text((d) => mmF(d.disponivel));
+  }
+  const step = Math.ceil(data.length / Math.max(1, Math.floor((W - m.l - m.r) / 44)));
+  g.filter((d, i) => i % step === 0).append('text').attr('x', (d) => x(d.mes) + x.bandwidth() / 2).attr('y', H - 8).attr('text-anchor', 'middle').text((d) => mmMes(d.mes));
+});
+
+dash.draw('destinos', (el) => {
+  const s = dash.data('destinos');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = s.status === 'error' ? 'Falha ao carregar' : '—'; return; }
+  const data = s.data.slice(0, 15);
+  if (!data.length) { el.textContent = 'Nenhum voo neste filtro.'; return; }
+  const max = d3.max(data, (d) => d.disponivel) || 1;
+  const tip = mmTip(el);
+  for (const d of data) {
+    const row = document.createElement('div');
+    row.className = 'mm-bar mm-click';
+    row.tabIndex = 0;
+    const name = document.createElement('span'); name.textContent = d.destino;
+    const track = document.createElement('span'); track.className = 'mm-bar-track';
+    const fill = document.createElement('span'); fill.className = 'mm-bar-fill';
+    fill.style.width = Math.max(0, d.disponivel) / max * 100 + '%';
+    fill.style.background = dash.colors[0];
+    track.appendChild(fill);
+    const val = document.createElement('b');
+    val.textContent = mmF(d.disponivel);
+    val.dataset.source = 'destinos'; val.dataset.field = 'disponivel'; val.dataset.where = 'destino=' + mmEnc(d.destino);
+    row.append(name, track, val);
+    const lines = [d.destino, mmF(d.disponivel) + ' livres de ' + mmF(d.oferta), 'Ocupação ' + d.ocupacao + '% · ' + mmF(d.voos) + ' voos'];
+    row.addEventListener('mousemove', (ev) => tip.show(ev, lines));
+    row.addEventListener('mouseleave', () => tip.hide());
+    const go = () => dash.setParams({ destino: d.destino });
+    row.addEventListener('click', go);
+    row.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') go(); });
+    el.insertBefore(row, el.lastChild);
+  }
+});
+
+dash.draw('t-rotas', (tb) => {
+  const s = dash.data('rotas');
+  tb.replaceChildren();
+  if (s.status !== 'ok') return;
+  for (const r of s.data.slice(0, 30)) {
+    const tr = tb.insertRow();
+    tr.dataset.key = mmEnc(r.rota);
+    const c = (t, n) => { const td = tr.insertCell(); if (n) td.className = 'n'; if (t instanceof Node) td.appendChild(t); else td.textContent = t; };
+    c(r.rota); c(mmF(r.voos), 1); c(mmF(r.oferta), 1); c(mmF(r.ocupados), 1); c(mmPill(r.ocupacao), 1); c(mmF(r.disponivel), 1);
+    tr.addEventListener('click', () => dash.setParams({ origem: r.origem, destino: r.destino }));
+  }
+});
+
+dash.draw('t-voos', (tb) => {
+  const s = dash.data('topvoos');
+  tb.replaceChildren();
+  if (s.status !== 'ok') return;
+  for (const r of s.data) {
+    const tr = tb.insertRow();
+    tr.dataset.key = String(r.rank);
+    const c = (t, n) => { const td = tr.insertCell(); if (n) td.className = 'n'; if (t instanceof Node) td.appendChild(t); else td.textContent = t; };
+    c(String(r.rank)); c(mmData(r.data)); c(r.rota); c(r.itinerario); c(r.cia); c(mmF(r.oferta), 1); c(mmPill(r.ocupacao), 1); c(mmF(r.disponivel), 1); c(mmData(r.retorno));
+    tr.addEventListener('click', () => dash.setParams({ origem: r.origem, destino: r.destino, mes: r.mes }));
+  }
+});
+</script>
+
+<script>
+dash._render();
+d3.csv('voos.csv').then((rows) => dash._load(rows)).catch((e) => { console.error(e); dash._load([], 'error'); });
+let mmResize;
+window.addEventListener('resize', () => { clearTimeout(mmResize); mmResize = setTimeout(dash._render, 150); });
+</script>
+</main>
+</body>
+</html>
