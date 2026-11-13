@@ -149,7 +149,12 @@ window.dash = (() => {
     <p class="mm-kicker">Disponibilidade Fretamento · lugares por rota</p>
     <h1 class="mm-title">Mapa da Mina</h1>
     <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
+    <nav class="mm-tabs" role="tablist" aria-label="Seções">
+      <button type="button" class="mm-tabbtn" role="tab" id="btn-mapa" data-tab="mapa-geral" aria-selected="true">Mapa da Mina</button>
+      <button type="button" class="mm-tabbtn" role="tab" id="btn-divulgacao" data-tab="divulgacao" aria-selected="false">Divulgação</button>
+    </nav>
   </header>
+  <div id="mapa-geral" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-mapa">
 
   <section class="mm-filters" id="filtros" aria-label="Filtros">
     <label for="f-origem">Origem (malha)<select id="f-origem" class="dash-select" data-draw="f-origem" data-source="opcoes"></select></label>
@@ -222,6 +227,60 @@ window.dash = (() => {
       <dt>Fonte</dt><dd>Power BI "Disponibilidade Fretamento", página Tabela_Exportação, exportada com dados até 13/11/2026. Bloqueios terrestres (CIA TERRESTRE) já vêm excluídos pelo relatório.</dd>
     </dl>
   </details>
+  </div>
+<div id="divulgacao" class="mm-tab mm" role="tabpanel" aria-labelledby="btn-divulgacao" hidden>
+  <section class="mm-filters mm-div-ctrl" aria-label="Filtros da divulgação">
+    <label for="d-uf">Estado de embarque<select id="d-uf" class="dash-select" data-draw="d-uf"></select></label>
+    <label for="d-jan">Embarques nos próximos
+      <select id="d-jan" class="dash-select">
+        <option value="15">15 dias</option>
+        <option value="30">30 dias</option>
+        <option value="45">45 dias</option>
+        <option value="60" selected>60 dias</option>
+        <option value="90">90 dias</option>
+      </select>
+    </label>
+    <p class="mm-div-hoje" data-draw="d-hoje"></p>
+  </section>
+
+  <p class="mm-div-resumo" data-draw="d-resumo">—</p>
+
+  <section class="mm-sec" id="recomendacoes">
+    <h2>O que divulgar primeiro</h2>
+    <p>Os 6 destinos com mais lugares livres perto do embarque, já com texto sugerido para as peças. A ordem considera a quantidade de lugares e quanto falta para o voo sair.</p>
+    <div class="mm-recs" data-draw="d-cards"></div>
+  </section>
+
+  <section class="mm-sec" id="proximidade">
+    <h2>Lugares livres × proximidade do embarque</h2>
+    <p>Cada bolha é um destino. Quanto mais alto, mais lugares livres; quanto mais à esquerda, mais perto do embarque. A área amarela marca onde a divulgação é mais urgente. O tamanho da bolha é o número de voos.</p>
+    <div class="mm-chart mm-scatter" data-draw="d-scatter"></div>
+  </section>
+
+  <section class="mm-sec" id="prazos">
+    <h2>Lugares livres por destino e prazo de embarque</h2>
+    <p>Todos os destinos com lugares na janela escolhida, ordenados pela prioridade de divulgação.</p>
+    <div class="mm-scroll">
+      <table class="mm-table mm-div-table">
+        <thead><tr><th>#</th><th>Destino</th><th class="n">Até 15 dias</th><th class="n">16 a 30</th><th class="n">31 a 60</th><th class="n">61 a 90</th><th class="n">Total livre</th><th>Próximo embarque</th><th>Prioridade</th></tr></thead>
+        <tbody data-draw="d-tabela"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="mm-foot" id="como-prioriza">
+    <summary>Como a prioridade é calculada</summary>
+    <dl>
+      <dt>Lugares livres</dt><dd>Soma do disponível dos voos com embarque entre hoje e o fim da janela escolhida, saindo do estado selecionado.</dd>
+      <dt>Peso por prazo</dt><dd>Cada lugar vale 3 pontos se o voo sai em até 15 dias, 2 pontos de 16 a 30 dias, 1,5 de 31 a 60 dias e 1 ponto depois disso. Lugar perto do embarque pesa mais porque sobra menos tempo para vender.</dd>
+      <dt>Pontuação</dt><dd>Soma dos pontos de todos os lugares livres do destino. Os destinos são ordenados por ela.</dd>
+      <dt>Urgente</dt><dd>Pelo menos 40% dos lugares livres saem em até 30 dias (e são 30 lugares ou mais).</dd>
+      <dt>Alta</dt><dd>Não é urgente, mas o próximo embarque com lugares é em até 45 dias.</dd>
+      <dt>Planejar</dt><dd>Os lugares estão mais distantes; dá para preparar campanha com antecedência.</dd>
+      <dt>Estado de embarque</dt><dd>Estado da cidade da malha de origem do voo.</dd>
+    </dl>
+  </details>
+</div>
 </div>
 
 <script>
@@ -616,8 +675,292 @@ body { overflow-x: clip; }
 }
 </style>
 
+<style>
+.mm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.mm-tabbtn { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 999px; border: 1px solid color-mix(in oklab, #ffffff 45%, transparent); background: transparent; color: var(--hero-fg); cursor: pointer; }
+.mm-tabbtn:hover { background: color-mix(in oklab, #ffffff 12%, transparent); }
+.mm-tabbtn[aria-selected="true"] { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+.mm-tabbtn:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.mm-tab { min-width: 0; }
+#divulgacao .mm-filters { position: static; }
+.mm-div-hoje { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); align-self: center; }
+.mm-div-resumo { margin: 0; font-size: clamp(16px, 2vw, 19px); line-height: 1.5; max-width: 70ch; }
+.mm-div-resumo b { font-weight: 700; box-shadow: inset 0 -0.42em 0 color-mix(in oklab, var(--yellow) 70%, transparent); padding-inline: 2px; }
+.mm-recs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 16px; }
+.mm-rec { border: 1px solid var(--color-border-line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; align-content: start; background: var(--color-bg); min-width: 0; }
+.mm-rec-top { display: flex; align-items: center; gap: 10px; }
+.mm-rank { flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: #ffffff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.mm-rec h3 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 800; font-size: 18px; letter-spacing: -.01em; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mm-chip { flex: none; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 3px 9px; border-radius: 999px; }
+.mm-chip.urg { background: var(--yellow); color: var(--ink); }
+.mm-chip.alta { background: var(--blue); color: #ffffff; }
+.mm-chip.plan { background: color-mix(in oklab, var(--blue) 15%, transparent); color: var(--blue); }
+.mm-rec-big { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.mm-rec-big b { font-family: var(--font-anthropic-serif); font-weight: 800; font-size: 32px; line-height: 1; color: var(--blue); font-variant-numeric: tabular-nums; }
+.mm-rec-big span { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+.mm-rec-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: var(--cds-font-size-caption); margin: 0; }
+.mm-rec-meta dt { color: var(--color-fg-muted); }
+.mm-rec-meta dd { margin: 0; font-weight: 500; min-width: 0; }
+.mm-seg { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--color-border-line); }
+.mm-seg i { display: block; height: 100%; }
+.mm-seg-legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--color-fg-muted); }
+.mm-seg-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.mm-seg-legend span::before { content: ""; width: 9px; height: 9px; border-radius: 2px; background: var(--c); }
+.mm-rec-voos { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.mm-rec-voos li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--color-border-line); padding-bottom: 3px; }
+.mm-rec-voos li b { color: var(--blue); white-space: nowrap; }
+.mm-copy { background: var(--yellow-soft); border: 1px solid color-mix(in oklab, var(--yellow) 60%, transparent); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.mm-copy p { margin: 0; font-size: 14px; line-height: 1.45; }
+.mm-copy-l { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-fg-muted); }
+.mm-copybtn { justify-self: start; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 0; background: var(--blue); color: #ffffff; cursor: pointer; }
+.mm-copybtn:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.mm-scatter { min-height: 360px; }
+.mm-scatter .mm-zone { fill: color-mix(in oklab, var(--yellow) 28%, transparent); }
+.mm-scatter .mm-zone-l { fill: color-mix(in oklab, var(--yellow) 30%, var(--color-fg)); font-weight: 700; font-size: 12px; }
+.mm-scatter .mm-grid line { stroke: var(--cds-chart-axis); stroke-opacity: .5; }
+.mm-scatter .mm-dot { fill: var(--blue); fill-opacity: .55; stroke: var(--blue); stroke-width: 1.5; cursor: pointer; }
+.mm-scatter .mm-dot.top { fill: var(--yellow); fill-opacity: .95; stroke: var(--blue-deep); }
+.mm-scatter text.mm-lbl { fill: var(--color-fg); font-weight: 600; font-size: 11px; }
+.mm-div-table td:nth-child(2) { font-weight: 600; }
+.mm-empty-msg { color: var(--color-fg-muted); margin: 0; }
+@media (max-width: 600px) { .mm-tabbtn { flex: 1; text-align: center; padding-inline: 10px; } }
+</style>
+
 <script>
-dash._render();
+window.mmUF = {
+  'SAO PAULO': 'SP', 'GUARULHOS': 'SP', 'CAMPINAS': 'SP', 'RIBEIRAO PRETO': 'SP', 'SAO JOSE DO RIO PRETO': 'SP', 'PRESIDENTE PRUDENTE': 'SP', 'BAURU': 'SP', 'ARACATUBA': 'SP',
+  'BELO HORIZONTE': 'MG', 'UBERLANDIA': 'MG', 'RIO DE JANEIRO': 'RJ', 'BRASILIA': 'DF',
+  'PORTO ALEGRE': 'RS', 'PASSO FUNDO': 'RS', 'CAXIAS DO SUL': 'RS', 'GOIANIA': 'GO', 'CUIABA': 'MT', 'SINOP': 'MT',
+  'CURITIBA': 'PR', 'LONDRINA': 'PR', 'MARINGA': 'PR', 'FOZ DO IGUAÇU': 'PR', 'CASCAVEL': 'PR', 'CAMPO GRANDE': 'MS',
+  'FORTALEZA': 'CE', 'JUAZEIRO DO NORTE': 'CE', 'FLORIANOPOLIS': 'SC', 'CHAPECO': 'SC', 'NAVEGANTES': 'SC', 'JOINVILLE': 'SC',
+  'VITORIA': 'ES', 'SALVADOR': 'BA', 'PORTO SEGURO': 'BA', 'VITORIA DA CONQUISTA': 'BA', 'ILHEUS': 'BA', 'RECIFE': 'PE', 'PETROLINA': 'PE',
+  'PORTO VELHO': 'RO', 'SAO LUIS': 'MA', 'IMPERATRIZ': 'MA', 'MANAUS': 'AM', 'ARACAJU': 'SE', 'BELEM': 'PA', 'MARABA': 'PA',
+  'TERESINA': 'PI', 'PALMAS': 'TO', 'RIO BRANCO': 'AC', 'JOAO PESSOA': 'PB', 'CAMPINA GRANDE': 'PB', 'NATAL': 'RN', 'MACEIO': 'AL', 'MACAPA': 'AP', 'BOA VISTA': 'RR'
+};
+window.mmUFNome = { AC: 'Acre', AL: 'Alagoas', AM: 'Amazonas', AP: 'Amapá', BA: 'Bahia', CE: 'Ceará', DF: 'Distrito Federal', ES: 'Espírito Santo', GO: 'Goiás', MA: 'Maranhão', MG: 'Minas Gerais', MS: 'Mato Grosso do Sul', MT: 'Mato Grosso', PA: 'Pará', PB: 'Paraíba', PE: 'Pernambuco', PI: 'Piauí', PR: 'Paraná', RJ: 'Rio de Janeiro', RN: 'Rio Grande do Norte', RO: 'Rondônia', RR: 'Roraima', RS: 'Rio Grande do Sul', SC: 'Santa Catarina', SE: 'Sergipe', SP: 'São Paulo', TO: 'Tocantins', EX: 'Exterior' };
+window.mmHoje = () => { const d = new Date(); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); };
+window.mmDias = (s) => { const [y, m, d] = String(s).split('-').map(Number); return Math.round((Date.UTC(y, m - 1, d) - mmHoje()) / 864e5); };
+window.mmPeso = (d) => (d <= 15 ? 3 : d <= 30 ? 2 : d <= 60 ? 1.5 : 1);
+window.mmNome = (s) => String(s).toLowerCase().replace(/(^|[\s(])(\S)/g, (m, a, c) => a + c.toUpperCase()).replace(/ (De|Do|Da|Dos|Das|E) /g, (m) => m.toLowerCase());
+window.mmDM = (s) => { const [, m, d] = String(s).split('-'); return d + '/' + m; };
+window.mmPrior = (g) => {
+  const perto = g.b15 + g.b30;
+  if (perto >= 30 && perto / g.livres >= 0.4) return ['Urgente', 'urg'];
+  if (g.proxDias <= 45) return ['Alta', 'alta'];
+  return ['Planejar', 'plan'];
+};
+window.mmGancho = (g) => {
+  if (g.proxDias <= 15) return 'Embarque imediato, últimos lugares';
+  const [, m, d] = g.prox.split('-').map(Number);
+  if ((m === 12 && d >= 20) || (m === 1 && d <= 3)) return 'Réveillon no destino';
+  if (m === 12 || m === 1) return 'Férias de verão';
+  if (m === 2) return 'Carnaval e férias';
+  if (m === 7) return 'Férias de julho';
+  return 'Pacote com lugar garantido no voo';
+};
+window.mmTexto = (g, ufNome) => {
+  const ori = g.origensTop.map((o) => mmNome(o[0]));
+  const saida = ori.length > 1 ? ori.slice(0, -1).join(', ') + ' e ' + ori[ori.length - 1] : ori[0];
+  const fim = g.ultimo ? ' a ' + mmDM(g.ultimo) : '';
+  return `${mmNome(g.destino)} saindo de ${saida}: ${mmF(g.livres)} lugares disponíveis para embarques de ${mmDM(g.prox)}${fim}. ${mmGancho(g)}. Garanta o seu com a CVC.`;
+};
+
+dash.calc('divulga', {
+  inputs: ['voos'],
+  title: 'Prioridade de divulgação',
+  description: 'Destinos com lugares livres no estado e na janela escolhidos, pontuados por lugares e proximidade do embarque.',
+  fn: (voos) => {
+    const p = dash.params();
+    const uf = p.duf || '';
+    const jan = +p.djan || 60;
+    const m = new Map();
+    for (const r of voos) {
+      const disp = +r.disponivel;
+      if (!(disp > 0)) continue;
+      const d = mmDias(r.data);
+      if (d < 0 || d > jan) continue;
+      const u = mmUF[r.origem] || 'EX';
+      if (uf && u !== uf) continue;
+      let g = m.get(r.destino);
+      if (!g) { g = { destino: r.destino, livres: 0, oferta: 0, ocup: 0, voos: 0, score: 0, b15: 0, b30: 0, b60: 0, b90: 0, prox: null, proxDias: 1e9, ultimo: null, somaDias: 0, origens: new Map(), lista: [] }; m.set(r.destino, g); }
+      g.livres += disp; g.oferta += +r.oferta; g.ocup += +r.confirmado + +r.reservado; g.voos++;
+      g.score += disp * mmPeso(d); g.somaDias += disp * d;
+      if (d <= 15) g.b15 += disp; else if (d <= 30) g.b30 += disp; else if (d <= 60) g.b60 += disp; else g.b90 += disp;
+      if (d < g.proxDias) { g.proxDias = d; g.prox = r.data; }
+      if (!g.ultimo || r.data > g.ultimo) g.ultimo = r.data;
+      g.origens.set(r.origem, (g.origens.get(r.origem) || 0) + disp);
+      g.lista.push({ data: r.data, dias: d, origem: r.origem, disp, cia: r.cia });
+    }
+    return [...m.values()].map((g) => ({
+      ...g,
+      score: Math.round(g.score),
+      ocupacao: g.oferta ? Math.floor(g.ocup / g.oferta * 100) : 0,
+      diasMedio: Math.round(g.somaDias / g.livres),
+      origensTop: [...g.origens].sort((a, b) => b[1] - a[1]).slice(0, 3),
+      proximos: g.lista.sort((a, b) => a.dias - b.dias || b.disp - a.disp).slice(0, 3),
+      origens: undefined, lista: undefined
+    })).sort((a, b) => b.score - a.score);
+  }
+});
+
+dash.draw('d-uf', (sel) => {
+  const s = dash.data('voos');
+  const cont = new Map();
+  if (s.status === 'ok') for (const r of s.data) { if (+r.disponivel > 0) { const u = mmUF[r.origem] || 'EX'; cont.set(u, (cont.get(u) || 0) + 1); } }
+  const ufs = [...cont.keys()].sort((a, b) => (mmUFNome[a] || a).localeCompare(mmUFNome[b] || b, 'pt-BR'));
+  sel.replaceChildren(new Option('Todos os estados', ''), ...ufs.map((u) => new Option(u === 'EX' ? 'Exterior' : u + ' · ' + (mmUFNome[u] || u), u)));
+  sel.value = dash.params().duf || '';
+  sel.onchange = () => dash.setParams({ duf: sel.value });
+});
+document.querySelectorAll('#d-jan').forEach((sel) => sel.addEventListener('change', () => dash.setParams({ djan: Number(sel.value) })));
+
+dash.draw('d-hoje', (el) => {
+  const d = new Date();
+  el.textContent = 'Prazos contados a partir de hoje, ' + d.toLocaleDateString('pt-BR') + '.';
+});
+
+dash.draw('d-resumo', (el) => {
+  const s = dash.data('divulga');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = s.status === 'error' ? 'Falha ao carregar os dados.' : 'Carregando…'; return; }
+  const p = dash.params();
+  const jan = +p.djan || 60;
+  const uf = p.duf || '';
+  const rows = s.data;
+  const onde = uf ? (uf === 'EX' ? 'Saindo do exterior' : 'Saindo de ' + (mmUFNome[uf] || uf)) : 'Em todos os estados';
+  if (!rows.length) { el.textContent = onde + ', não há lugares livres com embarque nos próximos ' + jan + ' dias.'; return; }
+  const tot = rows.reduce((a, r) => a + r.livres, 0);
+  const voos = rows.reduce((a, r) => a + r.voos, 0);
+  const perto = rows.reduce((a, r) => a + r.b15 + r.b30, 0);
+  const b = (t) => { const x = document.createElement('b'); x.textContent = t; return x; };
+  const top = rows.slice(0, 3).map((r) => mmNome(r.destino));
+  el.append(onde + ', há ', b(mmF(tot)), ' lugares livres em ', b(mmF(voos)), ' voos com embarque nos próximos ' + jan + ' dias');
+  if (jan > 30) el.append(', sendo ', b(mmF(perto)), ' nos próximos 30 dias');
+  el.append('. Prioridades para divulgar: ', b(top.join(', ')), '.');
+});
+
+dash.draw('d-cards', (el) => {
+  const s = dash.data('divulga');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = '—'; return; }
+  const rows = s.data.slice(0, 6);
+  if (!rows.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Nenhum destino com lugares livres neste estado e prazo. Tente uma janela maior.'; el.append(p); return; }
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const segs = [['b15', 'Até 15 dias', 'var(--yellow)'], ['b30', '16 a 30', 'color-mix(in oklab, var(--yellow) 55%, var(--blue))'], ['b60', '31 a 60', 'var(--blue)'], ['b90', '61 a 90', 'color-mix(in oklab, var(--blue) 40%, var(--color-panel))']];
+  rows.forEach((g, i) => {
+    const art = mk('article', 'mm-rec');
+    const top = mk('div', 'mm-rec-top');
+    const [pl, pc] = mmPrior(g);
+    top.append(mk('span', 'mm-rank', String(i + 1)), mk('h3', null, mmNome(g.destino)), mk('span', 'mm-chip ' + pc, pl));
+    const big = mk('div', 'mm-rec-big');
+    big.append(mk('b', null, mmF(g.livres)), mk('span', null, 'lugares livres em ' + mmF(g.voos) + ' voos · ocupação ' + g.ocupacao + '%'));
+    const seg = mk('div', 'mm-seg');
+    seg.setAttribute('role', 'img');
+    seg.setAttribute('aria-label', segs.map(([k, l]) => l + ': ' + g[k]).join(', '));
+    const leg = mk('div', 'mm-seg-legend');
+    for (const [k, l, c] of segs) {
+      if (!g[k]) continue;
+      const it = mk('i'); it.style.width = (g[k] / g.livres * 100) + '%'; it.style.background = c; seg.append(it);
+      const sp = mk('span', null, l + ': ' + mmF(g[k])); sp.style.setProperty('--c', c); leg.append(sp);
+    }
+    const meta = mk('dl', 'mm-rec-meta');
+    const dias = g.proxDias === 0 ? 'hoje' : g.proxDias === 1 ? 'amanhã' : 'em ' + g.proxDias + ' dias';
+    meta.append(mk('dt', null, 'Próximo embarque'), mk('dd', null, mmDM(g.prox) + ' (' + dias + ')'));
+    meta.append(mk('dt', null, 'Saindo de'), mk('dd', null, g.origensTop.map((o) => mmNome(o[0]) + ' (' + mmF(o[1]) + ')').join(', ')));
+    const ul = mk('ul', 'mm-rec-voos');
+    for (const v of g.proximos) {
+      const li = mk('li');
+      li.append(mk('span', null, mmDM(v.data) + ' · ' + mmNome(v.origem) + ' · ' + mmNome(v.cia)), mk('b', null, mmF(v.disp) + ' livres'));
+      ul.append(li);
+    }
+    const copy = mk('div', 'mm-copy');
+    const texto = mmTexto(g);
+    const p = mk('p', null, texto);
+    const btn = mk('button', 'mm-copybtn', 'Copiar texto');
+    btn.type = 'button';
+    btn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(texto); btn.textContent = 'Copiado'; }
+      catch (e) { const r = document.createRange(); r.selectNodeContents(p); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = 'Texto selecionado, use Ctrl+C'; }
+      setTimeout(() => { btn.textContent = 'Copiar texto'; }, 2500);
+    });
+    copy.append(mk('span', 'mm-copy-l', 'Texto sugerido'), p, btn);
+    art.append(top, big, seg, leg, meta, mk('span', 'mm-copy-l', 'Voos mais próximos'), ul, copy);
+    el.append(art);
+  });
+});
+
+dash.draw('d-scatter', (el) => {
+  const s = dash.data('divulga');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = '—'; return; }
+  const rows = s.data;
+  if (!rows.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Nenhum destino neste filtro.'; el.append(p); return; }
+  const jan = +dash.params().djan || 60;
+  const W = Math.max(300, el.clientWidth || 700), H = 360, m = { t: 16, r: 16, b: 40, l: 52 };
+  const x = d3.scaleLinear().domain([0, jan]).range([m.l, W - m.r]);
+  const ymax = d3.max(rows, (r) => r.livres) || 1;
+  const y = d3.scaleLinear().domain([0, ymax * 1.08]).nice().range([H - m.b, m.t]);
+  const rr = d3.scaleSqrt().domain([0, d3.max(rows, (r) => r.voos) || 1]).range([3, W < 500 ? 12 : 18]);
+  const med = d3.median(rows, (r) => r.livres) || 0;
+  const svg = d3.select(el).append('svg').attr('class', 'mm-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', 'Destinos por lugares livres e dias até o embarque');
+  const zx = x(Math.min(30, jan / 2)), zy = y(med);
+  svg.append('rect').attr('class', 'mm-zone').attr('x', m.l).attr('y', m.t).attr('width', Math.max(0, zx - m.l)).attr('height', Math.max(0, zy - m.t));
+  svg.append('text').attr('class', 'mm-zone-l').attr('x', m.l + 8).attr('y', m.t + 16).text('Divulgar já');
+  const gy = svg.append('g').attr('class', 'mm-grid').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(mmF));
+  gy.select('.domain').remove();
+  const gx = svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.min(8, Math.floor(W / 80))).tickFormat((d) => d + 'd'));
+  gx.select('.domain').style('stroke', 'var(--cds-chart-axis)');
+  svg.selectAll('.tick text').style('fill', 'var(--cds-text-secondary)').style('font-size', '11px');
+  svg.append('text').attr('x', W - m.r).attr('y', H - 6).attr('text-anchor', 'end').text('dias até o embarque (média ponderada pelos lugares) →');
+  svg.append('text').attr('x', m.l).attr('y', m.t - 4).text('lugares livres ↑').attr('dy', 0).style('display', 'none');
+  const tip = mmTip(el);
+  const topSet = new Set(rows.slice(0, 6).map((r) => r.destino));
+  const pts = [...rows].sort((a, b) => b.voos - a.voos);
+  svg.append('g').selectAll('circle').data(pts).join('circle')
+    .attr('class', (d) => 'mm-dot' + (topSet.has(d.destino) ? ' top' : ''))
+    .attr('cx', (d) => x(Math.min(jan, d.diasMedio))).attr('cy', (d) => y(d.livres)).attr('r', (d) => rr(d.voos))
+    .on('mousemove', (ev, d) => tip.show(ev, [mmNome(d.destino), mmF(d.livres) + ' lugares livres · ' + mmF(d.voos) + ' voos', 'Embarque médio em ' + d.diasMedio + ' dias · próximo em ' + d.proxDias, 'Prioridade: ' + mmPrior(d)[0] + ' · ' + mmF(d.score) + ' pontos']))
+    .on('mouseleave', () => tip.hide());
+  const placed = [];
+  for (const d of rows.slice(0, 10)) {
+    const cx = x(Math.min(jan, d.diasMedio)), cy = y(d.livres) - rr(d.voos) - 4;
+    if (placed.some((p) => Math.abs(p[0] - cx) < 70 && Math.abs(p[1] - cy) < 13)) continue;
+    placed.push([cx, cy]);
+    const t = svg.append('text').attr('class', 'mm-lbl').attr('x', cx).attr('y', Math.max(m.t + 10, cy)).attr('text-anchor', cx > W - 80 ? 'end' : cx < m.l + 40 ? 'start' : 'middle').text(mmNome(d.destino));
+  }
+});
+
+dash.draw('d-tabela', (tb) => {
+  const s = dash.data('divulga');
+  tb.replaceChildren();
+  if (s.status !== 'ok') return;
+  s.data.forEach((g, i) => {
+    const tr = tb.insertRow();
+    const c = (t, n) => { const td = tr.insertCell(); if (n) td.className = 'n'; if (t instanceof Node) td.appendChild(t); else td.textContent = t; };
+    const [pl, pc] = mmPrior(g);
+    const chip = document.createElement('span'); chip.className = 'mm-chip ' + pc; chip.textContent = pl;
+    c(String(i + 1)); c(mmNome(g.destino)); c(g.b15 ? mmF(g.b15) : '·', 1); c(g.b30 ? mmF(g.b30) : '·', 1); c(g.b60 ? mmF(g.b60) : '·', 1); c(g.b90 ? mmF(g.b90) : '·', 1);
+    c(mmF(g.livres), 1); c(mmDM(g.prox) + ' (' + g.proxDias + 'd)'); c(chip);
+  });
+});
+
+(() => {
+  const btns = document.querySelectorAll('.mm-tabbtn');
+  const show = (id) => {
+    if (!document.getElementById(id)) id = 'mapa-geral';
+    document.querySelectorAll('.mm-tab').forEach((p) => { p.hidden = p.id !== id; });
+    btns.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === id)));
+    dash._render();
+  };
+  btns.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); history.replaceState(null, '', '#' + b.dataset.tab); }));
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+  window.mmShowInitial = () => show(location.hash.slice(1) || 'mapa-geral');
+})();
+</script>
+
+<script>
+if (window.mmShowInitial) mmShowInitial(); else dash._render();
 d3.csv('voos.csv').then((rows) => dash._load(rows)).catch((e) => { console.error(e); dash._load([], 'error'); });
 let mmResize;
 window.addEventListener('resize', () => { clearTimeout(mmResize); mmResize = setTimeout(dash._render, 150); });
