@@ -152,14 +152,15 @@ window.dash = (() => {
     <h1 class="mm-title">Mapa da Mina</h1>
     <p class="mm-take" id="resumo" data-read lang="pt-BR">Restam <b data-draw="tk-disp" data-source="kpi" data-field="disponivel" data-row="0">—</b> lugares à venda em <b data-draw="tk-voos" data-source="kpi" data-field="voos" data-row="0">—</b> voos. A rota mais aberta é <b data-draw="tk-rota" data-source="rotas" data-field="rota" data-row="0">—</b>, com <b data-draw="tk-rota-n" data-source="rotas" data-field="disponivel" data-row="0">—</b> lugares livres, e o mês com mais sobra é <b data-draw="tk-mes" data-source="destaque" data-field="mes_nome" data-row="0">—</b> (<b data-draw="tk-mes-n" data-source="destaque" data-field="disponivel" data-row="0">—</b>).</p>
     <nav class="mm-tabs" aria-label="Seções">
-      <a class="mm-cta" href="#divulgacao" data-show-on="mapa-geral">
+      <a class="mm-cta" href="#divulgacao" data-tab="divulgacao">
         <span class="mm-cta-k">Para o marketing</span>
-        <span class="mm-cta-t">Ver recomendações de divulgação</span>
+        <span class="mm-cta-t">Divulgação</span>
         <span class="mm-cta-a" aria-hidden="true">→</span>
       </a>
-      <a class="mm-cta mm-cta-back" href="#mapa-geral" data-show-on="divulgacao" hidden>
-        <span class="mm-cta-a" aria-hidden="true">←</span>
-        <span class="mm-cta-t">Voltar ao Mapa da Mina</span>
+      <a class="mm-cta" href="#mapa-geral" data-tab="mapa-geral">
+        <span class="mm-cta-k">Lugares por rota e mês</span>
+        <span class="mm-cta-t">Mapa da Mina</span>
+        <span class="mm-cta-a" aria-hidden="true">→</span>
       </a>
     </nav>
   </header>
@@ -691,9 +692,15 @@ body { overflow-x: clip; }
 .mm-brand { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .mm-logo { display: block; background: #ffffff; border-radius: 12px; padding: 6px 10px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
 .mm-logo img { display: block; width: 180px; height: auto; max-width: 100%; }
-.mm-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 14px; }
-.mm-cta { display: inline-grid; grid-template-columns: 1fr auto; grid-template-areas: "k a" "t a"; align-items: center; column-gap: 18px; text-decoration: none; background: var(--yellow); color: var(--ink); border-radius: 14px; padding: 14px 22px; box-shadow: 0 8px 24px rgba(0, 0, 0, .22); max-width: 100%; }
-.mm-cta:hover { background: color-mix(in oklab, var(--yellow) 88%, #ffffff); }
+.mm-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 18px; max-width: 1240px; }
+.mm-cta { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "k a" "t a"; align-items: center; column-gap: 18px; row-gap: 2px; text-decoration: none; min-width: 0;
+  background: color-mix(in oklab, #ffffff 10%, transparent); color: #ffffff; border: 2px solid color-mix(in oklab, #ffffff 55%, transparent); border-radius: 16px; padding: 18px 26px; }
+.mm-cta:hover { background: color-mix(in oklab, #ffffff 20%, transparent); }
+.mm-cta.is-on { background: var(--yellow); border-color: var(--yellow); color: var(--ink); box-shadow: 0 10px 28px rgba(0, 0, 0, .25); }
+.mm-cta.is-on:hover { background: color-mix(in oklab, var(--yellow) 88%, #ffffff); }
+.mm-cta.is-on .mm-cta-a { transform: rotate(90deg); }
+.mm-cta-t { font-size: clamp(22px, 3vw, 32px) !important; }
+@media (max-width: 520px) { .mm-tabs { grid-template-columns: 1fr; gap: 10px; } .mm-cta { padding: 14px 18px; } }
 .mm-cta:focus-visible { outline: 3px solid #ffffff; outline-offset: 3px; }
 .mm-cta-k { grid-area: k; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; opacity: .75; }
 .mm-cta-t { grid-area: t; font-family: var(--font-anthropic-serif); font-weight: 800; font-size: clamp(18px, 2.4vw, 24px); letter-spacing: -.01em; line-height: 1.15; }
@@ -1014,7 +1021,7 @@ dash.draw('d-tabela', (tb) => {
   const show = (id) => {
     if (!id || !document.getElementById(id) || !document.getElementById(id).classList.contains('mm-tab')) id = 'mapa-geral';
     document.querySelectorAll('.mm-tab').forEach((p) => { p.hidden = p.id !== id; });
-    document.querySelectorAll('[data-show-on]').forEach((a) => { a.hidden = a.dataset.showOn !== id; });
+    document.querySelectorAll('.mm-cta[data-tab]').forEach((a) => { const on = a.dataset.tab === id; a.classList.toggle('is-on', on); if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     dash._render();
   };
   document.querySelectorAll('.mm-cta').forEach((a) => a.addEventListener('click', () => setTimeout(() => window.scrollTo({ top: 0 }), 0)));
