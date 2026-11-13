@@ -162,6 +162,11 @@ window.dash = (() => {
         <span class="mm-cta-t">Mapa da Mina</span>
         <span class="mm-cta-a" aria-hidden="true">→</span>
       </a>
+      <a class="mm-cta" href="#precos" data-tab="precos">
+        <span class="mm-cta-k">Pacotes saindo de Brasília</span>
+        <span class="mm-cta-t">Histórico de preços</span>
+        <span class="mm-cta-a" aria-hidden="true">→</span>
+      </a>
     </nav>
   </header>
 <div id="divulgacao" class="mm-tab mm" role="region" aria-label="Recomendações de divulgação" hidden>
@@ -294,10 +299,60 @@ window.dash = (() => {
     </dl>
   </details>
   </div>
+<div id="precos" class="mm-tab mm" role="region" aria-label="Histórico de preços" hidden>
+  <section class="mm-filters mm-div-ctrl" aria-label="Filtros de preços">
+    <label for="p-dest">Destino<select id="p-dest" class="dash-select" data-draw="p-dest"></select></label>
+    <label for="p-col">Coleta<select id="p-col" class="dash-select" data-draw="p-col"></select></label>
+    <p class="mm-div-hoje">Saída de Brasília (DF) · pacote exclusivo · preço por pessoa com taxas, 2 adultos</p>
+  </section>
+
+  <p class="mm-div-resumo" data-draw="p-resumo">Carregando preços…</p>
+
+  <section class="mm-sec" id="preco-medio">
+    <h2>Preço médio por destino</h2>
+    <p>Média do menor preço de cada semana com saída. Clique em um destino para ver o gráfico semanal e o orçamento de amostra.</p>
+    <div class="mm-scroll">
+      <table class="mm-table mm-p-table">
+        <thead><tr><th>Destino</th><th class="n">Preço médio</th><th class="n">Menor</th><th>Semana mais barata</th><th class="n">Maior</th><th class="n">Semanas</th><th class="n">vs. coleta anterior</th></tr></thead>
+        <tbody data-draw="p-tabela"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="mm-sec" id="preco-semana">
+    <h2 data-draw="p-linha-t">Menor preço por semana de embarque</h2>
+    <p>Cada ponto é a saída mais barata da semana. Em amarelo, as tarifas marcadas como promocionais. A linha tracejada é o preço médio.</p>
+    <div class="mm-chart mm-p-linha" data-draw="p-linha"></div>
+  </section>
+
+  <section class="mm-sec" id="preco-historico">
+    <h2 data-draw="p-hist-t">Histórico do preço médio</h2>
+    <p>Um ponto por coleta. Com o tempo, mostra se o destino está ficando mais caro ou mais barato.</p>
+    <div class="mm-chart mm-p-hist" data-draw="p-hist"></div>
+  </section>
+
+  <section class="mm-sec" id="amostras">
+    <h2>Orçamentos de amostra</h2>
+    <p>Saída mais barata de cada destino na coleta, com o print do orçamento tirado no Atlas. O preço muda o tempo todo, por isso vale o print. O link abre a mesma busca no Atlas, mas exige login de vendedor.</p>
+    <div class="mm-recs mm-p-cards" data-draw="p-cards"></div>
+  </section>
+
+  <details class="mm-foot" id="como-coleta">
+    <summary>Como os preços são coletados</summary>
+    <dl>
+      <dt>Fonte</dt><dd>Atlas CVC, busca de Pacote exclusivo (pacote estático), saindo de Brasília, 1 quarto com 2 adultos.</dd>
+      <dt>Preço do calendário</dt><dd>Valor "a partir de" do calendário de outras datas: menor preço por passageiro, já com taxas, para cada dia com saída.</dd>
+      <dt>Amostra semanal</dt><dd>Para cada semana (segunda a domingo), fica só o dia mais barato. O preço médio é a média dessas semanas.</dd>
+      <dt>Orçamento de amostra</dt><dd>O pacote que o Atlas abre na data mais barata. O valor final pode ser maior que o "a partir de", porque o Atlas abre o hotel padrão do pacote, não necessariamente o mais barato.</dd>
+      <dt>Período coberto</dt><dd>Até 6 meses à frente a partir da data da coleta.</dd>
+      <dt>Histórico</dt><dd>Cada coleta é guardada com a data. Os prints ficam na pasta prints/ do repositório, um por destino e coleta.</dd>
+    </dl>
+  </details>
+</div>
 </div>
 
 <script>
-window.mmF = d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['R$', ''] }).format(',d');
+window.mmF =d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['R$', ''] }).format(',d');
 window.mmMes = (s) => {
   const n = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
   const [y, m] = String(s).split('-');
@@ -1030,6 +1085,209 @@ dash.draw('d-tabela', (tb) => {
 })();
 </script>
 
+<style>
+/* Aba Histórico de preços */
+.mm-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 860px) { .mm-tabs { grid-template-columns: 1fr; gap: 10px; } .mm-cta { padding: 14px 18px; } }
+#precos .mm-filters { position: static; }
+.mm-p-table tbody tr.is-sel { background: var(--yellow-soft); }
+.mm-p-table tbody tr.is-sel td:first-child { box-shadow: inset 4px 0 0 var(--yellow); }
+.mm-p-table td:first-child { font-weight: 600; }
+.mm-p-table .mm-up { color: var(--color-bad); font-weight: 600; }
+.mm-p-table .mm-down { color: var(--color-ok); font-weight: 600; }
+.mm-p-table .mm-cheap { color: var(--blue); font-weight: 700; }
+.mm-p-linha, .mm-p-hist { min-height: 260px; }
+.mm-p-svg .mm-grid line { stroke: var(--cds-chart-axis); stroke-opacity: .45; }
+.mm-p-svg .mm-axis text { fill: var(--cds-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; }
+.mm-p-svg .mm-axis path, .mm-p-svg .mm-axis line { stroke: var(--cds-chart-axis); }
+.mm-p-svg .mm-line { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.mm-p-svg .mm-avg { stroke: var(--color-fg-muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.mm-p-svg .mm-avg-l { fill: var(--color-fg-muted); font-size: 12px; font-weight: 600; }
+.mm-p-svg .mm-pt { fill: var(--blue); stroke: var(--color-panel); stroke-width: 2; cursor: pointer; }
+.mm-p-svg .mm-pt.promo { fill: var(--yellow); stroke: var(--blue-deep); stroke-width: 1.5; }
+.mm-p-svg .mm-pt-l { fill: var(--color-fg); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mm-p-card { gap: 10px; }
+.mm-p-shot { display: block; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border-line); background: #ffffff; aspect-ratio: 880 / 390; }
+.mm-p-shot img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.mm-p-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.mm-p-acts a { font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 8px; text-decoration: none; }
+.mm-p-acts a.pri { background: var(--blue); color: #ffffff; }
+.mm-p-acts a.sec { border: 1px solid var(--blue); color: var(--blue); }
+.mm-p-acts a:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.mm-p-card .mm-rec-meta dd { overflow-wrap: anywhere; }
+.mm-p-leg { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--color-fg-muted); }
+.mm-p-leg span { display: inline-flex; align-items: center; gap: 6px; }
+.mm-p-leg i { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); }
+.mm-p-leg i.promo { background: var(--yellow); box-shadow: inset 0 0 0 1.5px var(--blue-deep); }
+</style>
+
+<script>
+window.mmP = { status: 'loading', rows: [], amostras: [], dest: '', col: '' };
+window.mmBRL = (v) => 'R$ ' + mmF(Math.round(v));
+window.mmPNome = (s) => String(s || '').replace(/ - [A-Z]{2}$/, '');
+window.mmPData = (s) => { const [y, m, d] = String(s || '').split('-'); return d ? d + '/' + m + '/' + y : ''; };
+window.mmPDM = (s) => { const [, m, d] = String(s || '').split('-'); return d ? d + '/' + m : ''; };
+
+// Resumo por destino de uma coleta: média, mínimo, máximo das semanas.
+window.mmPStats = (col) => {
+  const rs = mmP.rows.filter((r) => r.coleta === col);
+  return d3.rollups(rs, (v) => {
+    const min = v.reduce((a, b) => (b.preco < a.preco ? b : a));
+    return { iata: v[0].iata, destino: v[0].destino, media: d3.mean(v, (r) => r.preco), min: min.preco, minData: min.data, max: d3.max(v, (r) => r.preco), semanas: v.length };
+  }, (r) => r.iata).map((d) => d[1]).sort((a, b) => a.media - b.media);
+};
+window.mmPColetas = () => [...new Set(mmP.rows.map((r) => r.coleta))].sort().reverse();
+
+Promise.all([d3.csv('precos.csv', d3.autoType), d3.csv('amostras.csv', d3.autoType)]).then(([r, a]) => {
+  r.forEach((x) => { x.coleta = String(x.coleta instanceof Date ? x.coleta.toISOString().slice(0, 10) : x.coleta); x.semana = String(x.semana instanceof Date ? x.semana.toISOString().slice(0, 10) : x.semana); x.data = String(x.data instanceof Date ? x.data.toISOString().slice(0, 10) : x.data); });
+  a.forEach((x) => { x.coleta = String(x.coleta instanceof Date ? x.coleta.toISOString().slice(0, 10) : x.coleta); x.data = String(x.data instanceof Date ? x.data.toISOString().slice(0, 10) : x.data); });
+  Object.assign(mmP, { status: 'ok', rows: r, amostras: a });
+  mmP.col = mmPColetas()[0] || '';
+  dash._render();
+}).catch((e) => { console.error(e); mmP.status = 'error'; dash._render(); });
+
+const mmPSet = (k, v) => { mmP[k] = v; dash._render(); };
+
+dash.draw('p-dest', (el) => {
+  if (mmP.status !== 'ok') return;
+  const st = mmPStats(mmP.col);
+  const opts = [['', 'Todos os destinos']].concat(st.slice().sort((a, b) => a.destino.localeCompare(b.destino, 'pt')).map((s) => [s.iata, mmPNome(s.destino)]));
+  el.replaceChildren(...opts.map(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }));
+  el.value = mmP.dest;
+  if (!el.dataset.on) { el.dataset.on = 1; el.addEventListener('change', () => mmPSet('dest', el.value)); }
+});
+
+dash.draw('p-col', (el) => {
+  if (mmP.status !== 'ok') return;
+  el.replaceChildren(...mmPColetas().map((c) => { const o = document.createElement('option'); o.value = c; o.textContent = mmPData(c); return o; }));
+  el.value = mmP.col;
+  if (!el.dataset.on) { el.dataset.on = 1; el.addEventListener('change', () => mmPSet('col', el.value)); }
+});
+
+dash.draw('p-resumo', (el) => {
+  if (mmP.status === 'error') { el.textContent = 'Não foi possível carregar os preços.'; return; }
+  if (mmP.status !== 'ok') return;
+  const st = mmPStats(mmP.col);
+  if (!st.length) { el.textContent = 'Sem preços nesta coleta.'; return; }
+  const lo = st[0], hi = st[st.length - 1];
+  const all = mmP.rows.filter((r) => r.coleta === mmP.col);
+  const best = all.reduce((a, b) => (b.preco < a.preco ? b : a));
+  const b = (t) => { const x = document.createElement('b'); x.textContent = t; return x; };
+  el.replaceChildren('Na coleta de ' + mmPData(mmP.col) + ', o destino mais em conta saindo de Brasília é ', b(mmPNome(lo.destino)), ', com média de ', b(mmBRL(lo.media)), ' por pessoa. O mais caro é ', b(mmPNome(hi.destino)), ' (' + mmBRL(hi.media) + '). A saída mais barata de todas é ', b(mmPNome(best.destino) + ' em ' + mmPData(best.data)), ', por ' + mmBRL(best.preco) + '.');
+});
+
+dash.draw('p-tabela', (tb) => {
+  if (mmP.status !== 'ok') return;
+  const st = mmPStats(mmP.col);
+  const cols = mmPColetas(); const prev = cols[cols.indexOf(mmP.col) + 1];
+  const pv = prev ? new Map(mmPStats(prev).map((s) => [s.iata, s.media])) : new Map();
+  tb.replaceChildren();
+  st.forEach((s, i) => {
+    const tr = tb.insertRow();
+    tr.tabIndex = 0;
+    if (s.iata === mmP.dest) tr.className = 'is-sel';
+    const c = (t, cls) => { const td = tr.insertCell(); if (cls) td.className = cls; td.textContent = t; return td; };
+    c(mmPNome(s.destino));
+    c(mmBRL(s.media), 'n' + (i === 0 ? ' mm-cheap' : ''));
+    c(mmBRL(s.min), 'n');
+    c('saída ' + mmPDM(s.minData));
+    c(mmBRL(s.max), 'n');
+    c(String(s.semanas), 'n');
+    const p = pv.get(s.iata);
+    if (p) { const d = (s.media - p) / p; c((d > 0 ? '+' : '') + (d * 100).toFixed(1).replace('.', ',') + '%', 'n ' + (d > 0.005 ? 'mm-up' : d < -0.005 ? 'mm-down' : '')); }
+    else c('primeira coleta', 'n');
+    const pick = () => mmPSet('dest', mmP.dest === s.iata ? '' : s.iata);
+    tr.addEventListener('click', pick);
+    tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+});
+
+// Série semanal: um destino ou a média de todos.
+window.mmPSerie = () => {
+  const rs = mmP.rows.filter((r) => r.coleta === mmP.col && (!mmP.dest || r.iata === mmP.dest));
+  if (mmP.dest) return rs.map((r) => ({ semana: r.semana, data: r.data, preco: r.preco, promo: !!r.promo, label: mmPNome(r.destino) })).sort((a, b) => (a.semana < b.semana ? -1 : 1));
+  return d3.rollups(rs, (v) => ({ semana: v[0].semana, data: v[0].semana, preco: d3.mean(v, (r) => r.preco), promo: false, label: v.length + ' destinos' }), (r) => r.semana).map((d) => d[1]).sort((a, b) => (a.semana < b.semana ? -1 : 1));
+};
+const mmPNomeSel = () => { if (!mmP.dest) return ''; const r = mmP.rows.find((x) => x.iata === mmP.dest); return r ? mmPNome(r.destino) : ''; };
+
+dash.draw('p-linha-t', (el) => { el.textContent = mmP.dest ? 'Menor preço por semana de embarque: ' + mmPNomeSel() : 'Menor preço por semana de embarque: média dos destinos'; });
+dash.draw('p-hist-t', (el) => { el.textContent = 'Histórico do preço médio: ' + (mmP.dest ? mmPNomeSel() : 'todos os destinos'); });
+
+window.mmPChart = (el, pts, o) => {
+  el.replaceChildren();
+  if (!pts.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Sem preços para mostrar.'; el.appendChild(p); return; }
+  const W = Math.max(280, el.clientWidth || 600), H = 260, m = { t: 26, r: 18, b: 30, l: 64 };
+  const x = (o.single ? d3.scalePoint().domain(pts.map((p) => p.x)).padding(0.5) : d3.scaleTime().domain(d3.extent(pts, (p) => new Date(p.x + 'T12:00:00')))).range([m.l, W - m.r]);
+  const X = (p) => (o.single ? x(p.x) : x(new Date(p.x + 'T12:00:00')));
+  const lo = d3.min(pts, (p) => p.y), hi = d3.max(pts, (p) => p.y);
+  const y = d3.scaleLinear().domain([lo * 0.85, hi * 1.08]).nice().range([H - m.b, m.t]);
+  const svg = d3.select(el).append('svg').attr('class', 'mm-p-svg').attr('width', W).attr('height', H).attr('role', 'img').attr('aria-label', o.aria);
+  svg.append('g').attr('class', 'mm-grid').attr('transform', 'translate(' + m.l + ',0)').call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat('')).call((g) => g.select('.domain').remove());
+  svg.append('g').attr('class', 'mm-axis').attr('transform', 'translate(' + m.l + ',0)').call(d3.axisLeft(y).ticks(5).tickFormat((v) => mmBRL(v))).call((g) => g.select('.domain').remove()).call((g) => g.selectAll('line').remove());
+  const xa = o.single ? d3.axisBottom(x).tickFormat((v) => mmPData(v)) : d3.axisBottom(x).ticks(Math.min(8, Math.floor(W / 90))).tickFormat((d) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][d.getMonth()] + '/' + String(d.getFullYear()).slice(2));
+  svg.append('g').attr('class', 'mm-axis').attr('transform', 'translate(0,' + (H - m.b) + ')').call(xa);
+  if (o.avg) {
+    const av = d3.mean(pts, (p) => p.y);
+    svg.append('line').attr('class', 'mm-avg').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(av)).attr('y2', y(av));
+    svg.append('text').attr('class', 'mm-avg-l').attr('x', W - m.r).attr('y', y(av) - 6).attr('text-anchor', 'end').text('média ' + mmBRL(av));
+  }
+  if (pts.length > 1) svg.append('path').attr('class', 'mm-line').attr('d', d3.line().x(X).y((p) => y(p.y))(pts));
+  const tip = mmTip(el);
+  svg.selectAll('circle').data(pts).join('circle').attr('class', (p) => 'mm-pt' + (p.promo ? ' promo' : '')).attr('r', o.single ? 7 : 5).attr('cx', X).attr('cy', (p) => y(p.y))
+    .on('mousemove', (ev, p) => tip.show(ev, p.tip)).on('mouseleave', () => tip.hide());
+  if (o.labels) svg.selectAll('text.mm-pt-l').data(pts).join('text').attr('class', 'mm-pt-l').attr('x', X).attr('y', (p) => y(p.y) - 13).attr('text-anchor', 'middle').text((p) => mmBRL(p.y));
+  else {
+    const mn = pts.reduce((a, b) => (b.y < a.y ? b : a));
+    svg.append('text').attr('class', 'mm-pt-l').attr('x', X(mn)).attr('y', y(mn.y) + 20).attr('text-anchor', 'middle').text(mmBRL(mn.y));
+  }
+};
+
+dash.draw('p-linha', (el) => {
+  if (mmP.status !== 'ok') return;
+  const s = mmPSerie();
+  mmPChart(el, s.map((p) => ({ x: p.semana, y: p.preco, promo: p.promo, tip: mmP.dest ? [p.label, 'Saída ' + mmPData(p.data) + (p.promo ? ' · promocional' : ''), mmBRL(p.preco) + ' por pessoa'] : ['Semana de ' + mmPData(p.semana), 'Média de ' + p.label, mmBRL(p.preco) + ' por pessoa'] })), { avg: true, aria: 'Menor preço por semana' });
+  if (mmP.dest) { const l = document.createElement('div'); l.className = 'mm-p-leg'; l.innerHTML = '<span><i></i>tarifa normal</span><span><i class="promo"></i>promocional</span>'; el.appendChild(l); }
+});
+
+dash.draw('p-hist', (el) => {
+  if (mmP.status !== 'ok') return;
+  const cols = mmPColetas().slice().reverse();
+  const pts = cols.map((c) => {
+    const st = mmPStats(c).filter((s) => !mmP.dest || s.iata === mmP.dest);
+    return st.length ? { x: c, y: d3.mean(st, (s) => s.media), promo: false, tip: ['Coleta de ' + mmPData(c), (mmP.dest ? mmPNomeSel() : st.length + ' destinos'), 'Preço médio ' + mmBRL(d3.mean(st, (s) => s.media))] } : null;
+  }).filter(Boolean);
+  mmPChart(el, pts, { single: true, labels: true, aria: 'Histórico do preço médio por coleta' });
+  if (pts.length < 2) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Primeira coleta em ' + mmPData(cols[0]) + '. Cada nova coleta adiciona um ponto aqui.'; el.appendChild(p); }
+});
+
+dash.draw('p-cards', (el) => {
+  if (mmP.status !== 'ok') return;
+  const am = mmP.amostras.filter((a) => a.coleta === mmP.col && (!mmP.dest || a.iata === mmP.dest)).sort((a, b) => a.preco_calendario - b.preco_calendario);
+  el.replaceChildren();
+  if (!am.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Sem orçamento de amostra nesta coleta.'; el.appendChild(p); return; }
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  am.forEach((a, i) => {
+    const card = mk('article', 'mm-rec mm-p-card');
+    const top = mk('div', 'mm-rec-top');
+    top.append(mk('h3', null, mmPNome(a.destino)));
+    if (i === 0 && !mmP.dest) top.append(mk('span', 'mm-chip urg', 'Mais barato'));
+    else if (a.cia) top.append(mk('span', 'mm-chip plan', a.cia));
+    const shot = mk('a', 'mm-p-shot'); shot.href = a.print; shot.target = '_blank'; shot.rel = 'noopener';
+    shot.setAttribute('aria-label', 'Abrir o print do orçamento de ' + mmPNome(a.destino));
+    const img = mk('img'); img.src = a.print; img.loading = 'lazy'; img.alt = 'Print do orçamento no Atlas: ' + a.pacote; img.width = 880; img.height = 390;
+    shot.append(img);
+    const big = mk('div', 'mm-rec-big'); big.append(mk('b', null, mmBRL(a.preco_calendario)), mk('span', null, 'por pessoa a partir de, saída ' + mmPData(a.data)));
+    const dl = mk('dl', 'mm-rec-meta');
+    [['Pacote', a.pacote], ['Período', a.periodo], ['Valor no orçamento', mmBRL(a.valor_final_2pax) + ' para 2 pessoas (' + mmBRL(a.valor_final_2pax / 2) + ' cada)'], ['Coleta', mmPData(a.coleta)]].forEach(([k, v]) => dl.append(mk('dt', null, k), mk('dd', null, v)));
+    const acts = mk('div', 'mm-p-acts');
+    const l1 = mk('a', 'pri', 'Abrir no Atlas ↗'); l1.href = a.link; l1.target = '_blank'; l1.rel = 'noopener';
+    const l2 = mk('a', 'sec', 'Ver print'); l2.href = a.print; l2.target = '_blank'; l2.rel = 'noopener';
+    acts.append(l1, l2);
+    card.append(top, shot, big, dl, acts);
+    el.append(card);
+  });
+});
+</script>
 <script>
 if (window.mmShowInitial) mmShowInitial(); else dash._render();
 d3.csv('voos.csv').then((rows) => dash._load(rows)).catch((e) => { console.error(e); dash._load([], 'error'); });
