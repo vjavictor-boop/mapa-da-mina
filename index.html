@@ -253,8 +253,9 @@ window.dash = (() => {
 
   <section class="mm-sec" id="proximidade">
     <h2>Lugares livres × proximidade do embarque</h2>
-    <p>Cada bolha é um destino. Quanto mais alto, mais lugares livres; quanto mais à esquerda, mais perto do embarque. A área amarela marca onde a divulgação é mais urgente. O tamanho da bolha é o número de voos.</p>
-    <div class="mm-chart mm-scatter" data-draw="d-scatter"></div>
+    <p>Os 15 destinos com maior prioridade. Cada barra soma os lugares livres, dividida pelo prazo até o embarque: quanto mais amarelo, mais perto de sair. Passe o mouse para ver os números.</p>
+    <div class="mm-seg-legend mm-prazo-leg" data-draw="d-prazo-leg"></div>
+    <div class="mm-chart mm-prazos" data-draw="d-prazos"></div>
   </section>
 
   <section class="mm-sec" id="prazos">
@@ -274,7 +275,9 @@ window.dash = (() => {
       <dt>Lugares livres</dt><dd>Soma do disponível dos voos com embarque entre hoje e o fim da janela escolhida, saindo do estado selecionado.</dd>
       <dt>Peso por prazo</dt><dd>Cada lugar vale 3 pontos se o voo sai em até 15 dias, 2 pontos de 16 a 30 dias, 1,5 de 31 a 60 dias e 1 ponto depois disso. Lugar perto do embarque pesa mais porque sobra menos tempo para vender.</dd>
       <dt>Pontuação</dt><dd>Soma dos pontos de todos os lugares livres do destino. Os destinos são ordenados por ela.</dd>
-      <dt>Urgente</dt><dd>Pelo menos 40% dos lugares livres saem em até 30 dias (e são 30 lugares ou mais).</dd>
+      <dt>Urgente</dt><dd>200 lugares livres ou mais saem em até 30 dias, ou pelo menos 40% dos lugares livres saem nesse prazo (mínimo de 30 lugares).</dd>
+      <dt>Voos para puxar a campanha</dt><dd>Os três voos do destino com mais lugares livres, pesados pela proximidade do embarque.</dd>
+      <dt>Texto sugerido</dt><dd>O tema (Réveillon, férias, Carnaval) segue o período em que se concentram os lugares livres, não só o primeiro voo.</dd>
       <dt>Alta</dt><dd>Não é urgente, mas o próximo embarque com lugares é em até 45 dias.</dd>
       <dt>Planejar</dt><dd>Os lugares estão mais distantes; dá para preparar campanha com antecedência.</dd>
       <dt>Estado de embarque</dt><dd>Estado da cidade da malha de origem do voo.</dd>
@@ -714,6 +717,12 @@ body { overflow-x: clip; }
 .mm-copy-l { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--color-fg-muted); }
 .mm-copybtn { justify-self: start; font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 8px; border: 0; background: var(--blue); color: #ffffff; cursor: pointer; }
 .mm-copybtn:focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+.mm-prazos { display: grid; gap: 6px; min-height: 0; }
+.mm-prazos .mm-bar { cursor: default; grid-template-columns: minmax(0, 9.5rem) 1fr auto; }
+.mm-stack { background: transparent; }
+.mm-stack-in { display: flex; height: 100%; border-radius: 3px; overflow: hidden; }
+.mm-stack-in i { display: block; height: 100%; }
+.mm-prazo-leg { font-size: 12px; }
 .mm-scatter { min-height: 360px; }
 .mm-scatter .mm-zone { fill: color-mix(in oklab, var(--yellow) 28%, transparent); }
 .mm-scatter .mm-zone-l { fill: color-mix(in oklab, var(--yellow) 30%, var(--color-fg)); font-weight: 700; font-size: 12px; }
@@ -745,13 +754,14 @@ window.mmNome = (s) => String(s).toLowerCase().replace(/(^|[\s(])(\S)/g, (m, a, 
 window.mmDM = (s) => { const [, m, d] = String(s).split('-'); return d + '/' + m; };
 window.mmPrior = (g) => {
   const perto = g.b15 + g.b30;
-  if (perto >= 30 && perto / g.livres >= 0.4) return ['Urgente', 'urg'];
+  if (perto >= 200 || (perto >= 30 && perto / g.livres >= 0.4)) return ['Urgente', 'urg'];
   if (g.proxDias <= 45) return ['Alta', 'alta'];
   return ['Planejar', 'plan'];
 };
 window.mmGancho = (g) => {
-  if (g.proxDias <= 15) return 'Embarque imediato, últimos lugares';
-  const [, m, d] = g.prox.split('-').map(Number);
+  if (g.diasMedio <= 15) return 'Embarque imediato, últimos lugares';
+  const pico = new Date(mmHoje() + g.diasMedio * 864e5);
+  const m = pico.getUTCMonth() + 1, d = pico.getUTCDate();
   if ((m === 12 && d >= 20) || (m === 1 && d <= 3)) return 'Réveillon no destino';
   if (m === 12 || m === 1) return 'Férias de verão';
   if (m === 2) return 'Carnaval e férias';
@@ -797,7 +807,7 @@ dash.calc('divulga', {
       ocupacao: g.oferta ? Math.floor(g.ocup / g.oferta * 100) : 0,
       diasMedio: Math.round(g.somaDias / g.livres),
       origensTop: [...g.origens].sort((a, b) => b[1] - a[1]).slice(0, 3),
-      proximos: g.lista.sort((a, b) => a.dias - b.dias || b.disp - a.disp).slice(0, 3),
+      proximos: g.lista.sort((a, b) => b.disp * mmPeso(b.dias) - a.disp * mmPeso(a.dias) || a.dias - b.dias).slice(0, 3).sort((a, b) => a.dias - b.dias),
       origens: undefined, lista: undefined
     })).sort((a, b) => b.score - a.score);
   }
@@ -846,7 +856,7 @@ dash.draw('d-cards', (el) => {
   const rows = s.data.slice(0, 6);
   if (!rows.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Nenhum destino com lugares livres neste estado e prazo. Tente uma janela maior.'; el.append(p); return; }
   const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
-  const segs = [['b15', 'Até 15 dias', 'var(--yellow)'], ['b30', '16 a 30', 'color-mix(in oklab, var(--yellow) 55%, var(--blue))'], ['b60', '31 a 60', 'var(--blue)'], ['b90', '61 a 90', 'color-mix(in oklab, var(--blue) 40%, var(--color-panel))']];
+  const segs = mmSegs;
   rows.forEach((g, i) => {
     const art = mk('article', 'mm-rec');
     const top = mk('div', 'mm-rec-top');
@@ -884,12 +894,45 @@ dash.draw('d-cards', (el) => {
       setTimeout(() => { btn.textContent = 'Copiar texto'; }, 2500);
     });
     copy.append(mk('span', 'mm-copy-l', 'Texto sugerido'), p, btn);
-    art.append(top, big, seg, leg, meta, mk('span', 'mm-copy-l', 'Voos mais próximos'), ul, copy);
+    art.append(top, big, seg, leg, meta, mk('span', 'mm-copy-l', 'Voos para puxar a campanha'), ul, copy);
     el.append(art);
   });
 });
 
-dash.draw('d-scatter', (el) => {
+window.mmSegs = [['b15', 'Até 15 dias', 'var(--yellow)'], ['b30', '16 a 30 dias', 'color-mix(in oklab, var(--yellow) 65%, #c25e00)'], ['b60', '31 a 60 dias', 'var(--blue)'], ['b90', '61 a 90 dias', 'color-mix(in oklab, var(--blue) 40%, var(--color-panel))']];
+dash.draw('d-prazo-leg', (el) => {
+  const jan = +dash.params().djan || 60;
+  el.replaceChildren(...mmSegs.filter(([k]) => ({ b15: 0, b30: 16, b60: 31, b90: 61 })[k] <= jan).map(([, l, c]) => { const s = document.createElement('span'); s.textContent = l; s.style.setProperty('--c', c); return s; }));
+});
+dash.draw('d-prazos', (el) => {
+  const s = dash.data('divulga');
+  el.replaceChildren();
+  if (s.status !== 'ok') { el.textContent = '—'; return; }
+  const rows = s.data.slice(0, 15);
+  if (!rows.length) { const p = document.createElement('p'); p.className = 'mm-empty-msg'; p.textContent = 'Nenhum destino neste filtro.'; el.append(p); return; }
+  const max = d3.max(rows, (r) => r.livres) || 1;
+  const tip = mmTip(el);
+  for (const g of rows) {
+    const row = document.createElement('div'); row.className = 'mm-bar';
+    const name = document.createElement('span'); name.textContent = mmNome(g.destino);
+    const track = document.createElement('span'); track.className = 'mm-bar-track mm-stack';
+    const inner = document.createElement('span'); inner.className = 'mm-stack-in'; inner.style.width = (g.livres / max * 100) + '%';
+    for (const [k, l, c] of mmSegs) {
+      if (!g[k]) continue;
+      const i = document.createElement('i'); i.style.width = (g[k] / g.livres * 100) + '%'; i.style.background = c;
+      inner.append(i);
+    }
+    track.append(inner);
+    const val = document.createElement('b'); val.textContent = mmF(g.livres);
+    row.append(name, track, val);
+    const lines = [mmNome(g.destino) + ' · ' + mmF(g.livres) + ' livres', ...mmSegs.filter(([k]) => g[k]).map(([k, l]) => l + ': ' + mmF(g[k])), 'Prioridade: ' + mmPrior(g)[0]];
+    row.addEventListener('mousemove', (ev) => tip.show(ev, lines));
+    row.addEventListener('mouseleave', () => tip.hide());
+    el.insertBefore(row, el.lastChild);
+  }
+});
+
+dash.draw('d-scatter-off', (el) => {
   const s = dash.data('divulga');
   el.replaceChildren();
   if (s.status !== 'ok') { el.textContent = '—'; return; }
